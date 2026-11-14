@@ -1,0 +1,15 @@
+name: Petición de función / Feature request
+description: Sugiere una mejora / Suggest an improvement
+title: '[Feature]: '
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: ¿Qué te gustaría que hiciera Vortex64?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: ¿Por qué es útil? / Why is it useful?

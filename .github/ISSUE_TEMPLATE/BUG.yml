@@ -1,0 +1,42 @@
+name: Reporte de bug / Bug report
+description: Algo no funciona en Vortex64 / Something is broken in Vortex64
+title: '[Bug]: '
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por reportar. **No adjuntes ROMs ni contenido con copyright.** Los saves y save states sí se pueden adjuntar.
+  - type: input
+    id: version
+    attributes:
+      label: Versión de Vortex64 (AppImage / commit)
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Distro, GPU y driver (por ejemplo Fedora 44, Radeon RX 9060 XT, Mesa 26.2)
+    validations:
+      required: true
+  - type: input
+    id: game
+    attributes:
+      label: Juego (nombre y región) y plugin de video usado
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducirlo
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Qué esperabas y qué pasó
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log o salida de terminal (ejecuta el AppImage desde una terminal)
+      render: shell
