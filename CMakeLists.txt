@@ -189,7 +189,7 @@ endif()
 
 enable_testing()
 if(WIN32)
-    add_test(NAME common-test COMMAND common-test)
+    add_subdirectory(Tests)
 endif()
 if(UNIX)
 set(VORTEX_TEST_TARGETS

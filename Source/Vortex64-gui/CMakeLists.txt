@@ -781,3 +781,45 @@ set_target_properties(vortex64-icongen PROPERTIES CXX_STANDARD 17 CXX_STANDARD_R
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 target_compile_definitions(vortex64-icongen PRIVATE QT_NO_KEYWORDS)
 target_link_libraries(vortex64-icongen PRIVATE Qt6::Gui)
+
+if(WIN32)
+# Windows copy of the differential test of the x64 recompiler against the interpreter (no X server needed)
+add_executable(jit-fuzz-test EXCLUDE_FROM_ALL
+    tests/jit_fuzz_test.cpp
+    MainWindow.cpp
+    MainMenu.cpp
+    ${VORTEX_SOURCES}
+    VirtualKeys.cpp
+    Settings/ShortCutsPage.cpp
+    Dialogs/AboutDialog.cpp
+    Dialogs/LogOptionsDialog.cpp
+    ScreenSaverInhibit_win.cpp
+    ScreenSaverInhibit.h
+    PresentSync.cpp
+    Dialogs/FirstRun.cpp
+    Dialogs/CheatDialog.cpp
+    Dialogs/EnhancementDialog.cpp
+    Dialogs/EnhancementTree.cpp
+    about.qrc
+    ../Vortex64-ui/UserInterface/MenuShortCuts.cpp
+    ../Vortex64-ui/UserInterface/DiscordRPC.cpp
+    QtNotification.cpp
+    RomBrowser.cpp
+    RomInformation.cpp
+    Settings/SettingsDialog.cpp
+    Settings/SettingsPage.cpp
+    Settings/SettingsPages.cpp
+    Settings/VortexPages.cpp
+    ../Vortex64-ui/Settings/UISettings.cpp
+    ../Vortex64-ui/Plugins/PluginList.cpp
+    $<TARGET_OBJECTS:Vortex64-debugger-ui>
+    $<TARGET_OBJECTS:Vortex64-debugger-backend>
+    $<TARGET_OBJECTS:Vortex64-debugger-scripts>
+)
+target_include_directories(jit-fuzz-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)
+set_target_properties(jit-fuzz-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+target_compile_definitions(jit-fuzz-test PRIVATE QT_NO_KEYWORDS)
+target_link_libraries(jit-fuzz-test PRIVATE Common Vortex64-core Qt6::Widgets vendored_png discord_rpc)
+add_dependencies(jit-fuzz-test Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input)
+endif()

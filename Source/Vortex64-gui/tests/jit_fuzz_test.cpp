@@ -1991,7 +1991,9 @@ int main(int argc, char ** argv)
             g_Options.Seed = (uint32_t)strtoul(Arg.c_str(), nullptr, 10);
         }
     }
+#ifndef _WIN32
     setenv("SDL_VIDEODRIVER", "x11", 0);
+#endif
     QApplication App(argc, argv);
     MainWindow Window;
     QTimer DismissTimer;

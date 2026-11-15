@@ -35,10 +35,13 @@ jobs:
       - name: Build (Release)
         run: cmake --build --preset windows-msvc-release
 
-      - name: Tests (common-test)
-        run: |
-          cmake --build --preset windows-msvc-release --target common-test
-          ctest --test-dir build/windows-msvc-release --output-on-failure
+      - name: Build tests
+        run: cmake --build --preset windows-msvc-release --target common-test core-test rsp-test jit-fuzz-test fake-test-rom
+
+      - name: Tests (ctest; the ~3 minute directed JIT suite runs too)
+        # the CPU tests need an OpenGL context (the plugins are loaded the way the application does);
+        # windows-latest runners provide a software renderer
+        run: ctest --test-dir build/windows-msvc-release --output-on-failure
 
       - name: Package portable ZIP
         shell: pwsh

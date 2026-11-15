@@ -168,3 +168,12 @@ Observación sin resolver (impacto bajo): `%APPDATA%\vortex64\Project64.cfg` apa
 (restos al acortarse el texto de las versiones de plugin Debug -> Release); posible fallo del acortado en `CIniFileBase::fInsertSpaces`/escritura.
 No reproducido en una prueba aislada; pendiente.
 Sin verificar aún: portadas (se ve un marcador de posición), favoritos, filtros/ordenación, vista de lista, zip/7z como ROM.
+
+## Hito 14: batería de pruebas automáticas (2026-11-15)
+Ver `Docs/development/TESTING.md`. `ctest`: 9/9 pruebas (common, core, rsp, 2x cli-boot, 4x jit-fuzz) + `jit-fuzz-directed` (PASS, 2 min 48 s).
+- Diferencial intérprete-vs-JIT: 4 configuraciones x 300 programas aleatorios + programas dirigidos: **0 diferencias** en Windows.
+- Nuevas: `Tests/core_test.cpp` (48 comprobaciones), `Tests/rsp_test.cpp` (57 comprobaciones), `Tests/cli_boot.cmake`.
+- Las pruebas detectan regresiones: al reintroducir el bug de `dirent`, `core` falla.
+- `jit-fuzz-test` (de la suite Linux) portado a Windows sin cambios de lógica (sin X11).
+- El supuesto erróneo de una de mis pruebas (el RSP no respeta un presupuesto de ciclos con bucle infinito) se corrigió: `DoRspCycles` no mira el bit de halt.
+- El INI acortado no deja restos en la prueba aislada (la línea `n` del Project64.cfg real sigue sin explicación).

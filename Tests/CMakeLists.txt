@@ -1,0 +1,48 @@
+# Vortex64-Windows automated tests (see Docs/development/TESTING.md)
+if(NOT WIN32)
+    return()
+endif()
+
+add_executable(core-test core_test.cpp ${CMAKE_SOURCE_DIR}/Source/Vortex64-cli/LinuxNotification.cpp)
+target_include_directories(core-test PRIVATE ${CMAKE_SOURCE_DIR}/Source)
+set_target_properties(core-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+target_link_libraries(core-test PRIVATE Common Vortex64-core)
+# the plugins the application loads at start-up
+add_dependencies(core-test Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input)
+
+add_executable(rsp-test rsp_test.cpp)
+target_include_directories(rsp-test PRIVATE ${CMAKE_SOURCE_DIR}/Source)
+set_target_properties(rsp-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+target_link_libraries(rsp-test PRIVATE Common)
+add_dependencies(rsp-test Vortex64-rsp)
+
+add_executable(make-fake-rom make_fake_rom.cpp)
+set_target_properties(make-fake-rom PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+set(FAKE_ROM ${CMAKE_BINARY_DIR}/fake-test-rom.z64)
+add_custom_command(OUTPUT ${FAKE_ROM} COMMAND make-fake-rom ${FAKE_ROM} DEPENDS make-fake-rom)
+add_custom_target(fake-test-rom DEPENDS ${FAKE_ROM})
+
+add_test(NAME common COMMAND common-test)
+add_test(NAME core COMMAND core-test)
+add_test(NAME rsp COMMAND rsp-test)
+add_test(NAME cli-boot-interpreter COMMAND ${CMAKE_COMMAND} -DCLI=$<TARGET_FILE:vortex64-cli> -DROM=${FAKE_ROM} -DMODE=--interpreter -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_boot.cmake)
+add_test(NAME cli-boot-recompiler COMMAND ${CMAKE_COMMAND} -DCLI=$<TARGET_FILE:vortex64-cli> -DROM=${FAKE_ROM} -DMODE=--recompiler -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_boot.cmake)
+if(TARGET jit-fuzz-test)
+    # differential test of the x64 recompiler against the interpreter (4 configurations x 300 random programs)
+    foreach(CFG "nodirected" "nodirected;nocache" "nodirected;core32" "nodirected;link=1")
+        string(REPLACE ";" "_" CFGNAME "${CFG}")
+        add_test(NAME jit-fuzz-${CFGNAME} COMMAND jit-fuzz-test ${FAKE_ROM} 300 7 ${CFG})
+        set_tests_properties(jit-fuzz-${CFGNAME} PROPERTIES TIMEOUT 300)
+    endforeach()
+    # the directed programs (branches, jumps, memory, arithmetic, immediates, shifts, loops): ~3 minutes
+    add_test(NAME jit-fuzz-directed COMMAND jit-fuzz-test ${FAKE_ROM} 1 1 directed)
+    set_tests_properties(jit-fuzz-directed PROPERTIES TIMEOUT 900 LABELS slow)
+endif()
+set_tests_properties(common core rsp cli-boot-interpreter cli-boot-recompiler PROPERTIES TIMEOUT 120)
+# user data of every test run is isolated from the real user profile
+get_property(ALL_TESTS DIRECTORY PROPERTY TESTS)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/test-appdata ${CMAKE_BINARY_DIR}/test-localappdata)
+foreach(T ${ALL_TESTS})
+    set_property(TEST ${T} APPEND PROPERTY ENVIRONMENT "APPDATA=${CMAKE_BINARY_DIR}/test-appdata" "LOCALAPPDATA=${CMAKE_BINARY_DIR}/test-localappdata")
+endforeach()
