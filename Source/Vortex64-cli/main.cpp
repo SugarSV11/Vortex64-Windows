@@ -10,6 +10,7 @@
 // + ROM loading work together as real, native Linux code before any GUI
 // work starts.
 #include <Vortex64-core/AppInit.h>
+#include <chrono>
 #include <csignal>
 #include <Vortex64-core/N64System/N64System.h>
 #include <Vortex64-core/N64System/SystemGlobals.h>
@@ -201,8 +202,22 @@ int main(int argc, char ** argv)
     printf(" LOADING ROM: %s\n", RomPath);
     printf("============================================================\n");
 
+    // --unlimited: no frame limiter and no audio sync (to measure how much headroom the emulator has);
+    // the settings must be changed before the emulation starts
+    for (int i = 2; i < argc; i++)
+    {
+        if (stdstr(argv[i]) == "--unlimited")
+        {
+            g_Settings->SaveBool(UserInterface_BasicMode, false);
+            g_Settings->SaveBool(GameRunning_LimitFPS, false);
+            g_Settings->SaveBool(Setting_SyncViaAudioEnabled, false);
+            printf("[Vortex64] Frame limiter and audio sync off (--unlimited).\n");
+        }
+    }
+
     bool Result = CN64System::RunFileImage(RomPath);
     printf(Result ? "\n[Vortex64] ROM loaded and running.\n" : "\n[Vortex64] Failed to load ROM.\n");
+
 
     // RunFileImage() always returns true once the ROM file itself loads,
     // even if plugin/CPU init inside RunLoadedImage() then failed (see
@@ -226,6 +241,15 @@ int main(int argc, char ** argv)
         // The loop ends when emulation stops by itself (game over, BreakPoint,
         // End Emulation) or when SIGINT/SIGTERM asks for a clean shutdown.
         bool SawRunning = false;
+        // --perf: once a second, emulated time (CP0 Count at 46.875 MHz) against real time
+        bool Perf = false;
+        for (int i = 2; i < argc; i++)
+        {
+            Perf = Perf || stdstr(argv[i]) == "--perf";
+        }
+        auto PerfLast = std::chrono::steady_clock::now();
+        uint64_t PerfLastCount = 0;
+        bool PerfHaveLast = false;
         while (g_BaseSystem != nullptr && !g_QuitRequested)
         {
             const bool Running = g_Settings->LoadBool(GameRunning_CPU_Running);
@@ -237,7 +261,25 @@ int main(int argc, char ** argv)
             {
                 break;
             }
-            usleep(16 * 1000);
+            if (Perf && Running && g_Reg != nullptr)
+            {
+                const auto Now = std::chrono::steady_clock::now();
+                const double Real = std::chrono::duration<double>(Now - PerfLast).count();
+                if (Real >= 1.0)
+                {
+                    const uint64_t Count = (uint32_t)g_Reg->COUNT_REGISTER;
+                    if (PerfHaveLast)
+                    {
+                        const uint32_t Delta = (uint32_t)Count - (uint32_t)PerfLastCount; // wrap safe
+                        const double Emulated = (double)Delta / 46875000.0;
+                        printf("[PERF] emulated %.3f s in %.3f s real = %.2fx (%.1f VI/s equivalent)\n", Emulated, Real, Emulated / Real, 60.0 * Emulated / Real);
+                    }
+                    PerfLastCount = Count;
+                    PerfLast = Now;
+                    PerfHaveLast = true;
+                }
+            }
+            usleep(Perf ? 2 * 1000 : 16 * 1000);
         }
         if (g_BaseSystem != nullptr)
         {

@@ -183,3 +183,26 @@ SDL (`SDL_NumJoysticks`) y el listado de dispositivos de Windows no detectan nin
 SDL GameController -> plugin de entrada -> juego **no se ha podido probar**. Añadida la herramienta manual `gamepad-probe`
 (`cmake --build --preset windows-msvc-release --target gamepad-probe`; `bin\gamepad-probe.exe [segundos]`), que lista los mandos y
 muestra sus eventos; sin mando termina con código 2. Pendiente: conectar un mando, comprobar con la herramienta y luego jugar con él en Vortex64.
+
+## Hito 15: margen de rendimiento medido sin limitador (2026-11-15)
+Nuevas opciones de la CLI: `--unlimited` (desactiva el limitador de fotogramas, el "modo básico" y la sincronización por audio, que antes
+cap­aban todo a 60 VI/s) y `--perf` (una vez por segundo compara el tiempo emulado, registro Count del CPU a 46.875 MHz, con el tiempo real).
+Ojo: el contador "VI/s" del núcleo muestra `-.--` sin limitador, por eso se usa Count.
+
+SM64 (USA), build Release, AMD RX 9060 XT, ventana por defecto, 36 muestras de 1 s por modo (pantalla de título + modo demo):
+
+| CPU | mínimo | media | máximo | muestras < 1x |
+|---|---|---|---|---|
+| JIT (`--recompiler`) | 2.01x | 2.47x | 3.91x | 0 |
+| Intérprete (`--interpreter`) | 2.02x | 2.44x | 3.47x | 0 |
+
+(1x = 60 VI/s, velocidad real de la consola.) Una pasada anterior mostró caídas puntuales (0.5x-0.75x en alguna muestra, intérprete y JIT) y picos de hasta 4.7x:
+la variación entre pasadas es grande y no se ha repetido de forma controlada.
+
+Lectura honesta: en esta escena el JIT **no** supera al intérprete, lo que indica que el límite no es la emulación de CPU sino
+otra parte (vídeo HLE/OpenGL, sincronización de ventana o el propio bucle). No se puede concluir nada sobre el beneficio del JIT con esta escena;
+tampoco hay datos de escenas de juego pesadas (solo título/demo), de otros juegos ni de la GPU/CPU usadas. Pendiente: perfilado real (VTune/ETW/Superluminal)
+y escenas pesadas antes de optimizar.
+
+Aclaración sobre la línea `n` del `Project64.cfg`: no se reproduce acortando varias claves seguidas en una prueba aislada (290 bytes correctos);
+lo más probable es que apareciera porque yo terminaba el proceso de la GUI con `Stop-Process -Force` mientras escribía el fichero (la escritura del INI no es atómica). Sin confirmar.
