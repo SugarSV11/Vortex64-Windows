@@ -61,3 +61,19 @@ SDL2 2.32.10 vía vcpkg (x64-windows). Solo compilación/enlazado; sin carga ni 
 - **Sin probar:** creación del contexto OpenGL, `SDL_CreateWindowFrom(HWND)` embebido, ningún renderizado.
 - No incluido: GLideN64 (desactivado en presets; hace falta su capa Win32/WGL o SDL2).
 - Pendiente: CLI, árbol CMake completo con presets (hasta ahora se compila con un proyecto de prueba aparte), GUI Qt6, ejecución con ROM.
+
+## Hito 6: la CLI arranca en Windows y carga los 4 plugins (2026-11-14)
+Build completo con `cmake --preset windows-msvc-debug` (MSVC + Ninja + vcpkg manifest, sin Qt; Qt es la feature opcional `gui`).
+`bin/vortex64-cli.exe` + `Vortex64-{rsp,video,audio,input}.dll` + SDL2d/libpng/zlib junto a él.
+
+Prueba realizada (con una ROM FALSA de 4 MB de ceros y cabecera z64, no es un juego):
+- `AppInit` OK, ajustes/RDB cargados, plugin de vídeo cargado, ROM cargada, emulación iniciada.
+- El plugin de vídeo crea la ventana SDL2/OpenGL en una AMD Radeon RX 9060 XT (GL 4.6 compat).
+- La emulación termina sola en `MemoryVirtualMem.cpp:226` (acceso a dirección inválida): esperado, el "juego" son ceros sin código
+  de arranque. **No demuestra emulación correcta**: falta probar con una ROM real (la aportará el usuario).
+
+Bug real encontrado y corregido: `Common/path.cpp` solo entendía rutas Linux (absoluta = empieza por '/'; anteponía '/' a `C:/...`),
+lo que dejaba sin crear el INI de ajustes y provocaba un acceso nulo en `CIniFile` (crash). Ahora reconoce letras de unidad y los
+buffers de ruta son mayores (antes 260). Añadido manejador de crashes con pila simbolizada en la CLI (usa el .pdb).
+
+Pendiente: probar con ROM real (CPU/RSP/vídeo/audio/entrada), JIT (`--recompiler`), GUI Qt6, CI, paquete portable.

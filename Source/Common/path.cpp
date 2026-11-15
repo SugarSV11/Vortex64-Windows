@@ -40,6 +40,17 @@ static inline int fchmod(int, int) { return 0; } // permissions are not copied o
 const char * const DIR_DOUBLEDELIM = "//";
 const char DIRECTORY_DELIMITER = '/';
 const char DIRECTORY_DELIMITER2 = '\\';
+
+// Vortex64-Windows: a path that starts with a drive letter ("C:") is absolute and must not get a leading '/'
+static inline bool HasDriveLetter(const char * p)
+{
+#ifdef _WIN32
+    return p != nullptr && ((p[0] >= 'A' && p[0] <= 'Z') || (p[0] >= 'a' && p[0] <= 'z')) && p[1] == ':';
+#else
+    (void)p;
+    return false;
+#endif
+}
 #ifdef _WIN32
 static inline bool MakeDirWin(const char * p) { return _mkdir(p) == 0; }
 #define MakeDir MakeDirWin
@@ -509,9 +520,9 @@ void CPath::GetComponents(std::string * pDirectory, std::string * pName, std::st
 {
     WriteTrace(TracePath, TraceDebug, "Start (m_strPath: \"%s\")", m_strPath.c_str());
 
-    char buff_dir[260];
-    char buff_name[260];
-    char buff_ext[260];
+    char buff_dir[1024];
+    char buff_name[1024];
+    char buff_ext[1024];
 
     memset(buff_dir, 0, sizeof(buff_dir));
     memset(buff_name, 0, sizeof(buff_name));
@@ -665,7 +676,7 @@ void CPath::GetFullyQualified(std::string & rFullyQualified) const
 
 bool CPath::IsRelative() const
 {
-    if (m_strPath.length() > 1 && m_strPath[0] == DIRECTORY_DELIMITER)
+    if (m_strPath.length() > 1 && (m_strPath[0] == DIRECTORY_DELIMITER || HasDriveLetter(m_strPath.c_str())))
     {
         return false;
     }
@@ -676,12 +687,12 @@ bool CPath::IsRelative() const
 
 void CPath::SetComponents(const char * lpszDirectory, const char * lpszName, const char * lpszExtension)
 {
-    char buff_fullname[260];
+    char buff_fullname[2048];
 
     memset(buff_fullname, 0, sizeof(buff_fullname));
     if (lpszDirectory != nullptr && lpszDirectory[0] != '\0')
     {
-        if (lpszDirectory[0] != DIRECTORY_DELIMITER)
+        if (lpszDirectory[0] != DIRECTORY_DELIMITER && !HasDriveLetter(lpszDirectory))
         {
             buff_fullname[0] = DIRECTORY_DELIMITER;
         }
@@ -862,9 +873,12 @@ void CPath::CurrentDirectory()
 {
     Empty();
 
-    char buff_path[260];
+    char buff_path[1024];
     memset(buff_path, 0, sizeof(buff_path));
     getcwd(buff_path, sizeof(buff_path));
+#ifdef _WIN32
+    for (char * c = buff_path; *c; c++) { if (*c == '\\') *c = '/'; }
+#endif
     SetDirectory(buff_path);
 }
 
@@ -1335,7 +1349,7 @@ void CPath::StripLeadingBackslash(std::string & Directory) const
     if (nLength <= 1)
         return;
 
-    if (Directory[0] == DIRECTORY_DELIMITER)
+    if (Directory[0] == DIRECTORY_DELIMITER && !HasDriveLetter(Directory.c_str()))
         Directory = Directory.substr(1);
 }
 
@@ -1388,7 +1402,7 @@ void CPath::EnsureTrailingBackslash(std::string & Directory) const
 
 void CPath::EnsureLeadingBackslash(std::string & Directory) const
 {
-    if (Directory.empty() || (Directory[0] != DIRECTORY_DELIMITER))
+    if (Directory.empty() || (Directory[0] != DIRECTORY_DELIMITER && !HasDriveLetter(Directory.c_str())))
     {
         Directory = stdstr_f("%c%s", DIRECTORY_DELIMITER, Directory.c_str());
     }

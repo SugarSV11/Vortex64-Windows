@@ -4,7 +4,14 @@
   "dependencies": [
     "sdl2",
     "libpng",
-    "zlib",
-    { "name": "qtbase", "default-features": false, "features": ["widgets", "gui"] }
-  ]
+    "zlib"
+  ],
+  "features": {
+    "gui": {
+      "description": "Qt6 GUI",
+      "dependencies": [
+        { "name": "qtbase", "default-features": false, "features": ["widgets", "gui"] }
+      ]
+    }
+  }
 }

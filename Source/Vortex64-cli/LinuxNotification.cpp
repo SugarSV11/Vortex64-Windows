@@ -1,7 +1,13 @@
 #include "LinuxNotification.h"
+#ifndef _WIN32
 #include <pthread.h>
+#endif
+#ifdef _WIN32
+#include <Common/Platform.h>
+#else
 #include <sys/syscall.h>
 #include <unistd.h>
+#endif
 #include <Vortex64-core/Multilanguage/Language.h>
 #include <Vortex64-core/N64System/N64System.h>
 #include <Vortex64-core/N64System/SystemGlobals.h>
@@ -23,10 +29,19 @@ void CLinuxNotification::DisplayError(LanguageStringID StringID) const
 void CLinuxNotification::FatalError(const char * Message) const
 {
     fprintf(stderr, "\n[FATAL] %s\n", Message ? Message : "");
+#ifdef _WIN32
+    // main thread is left to the caller; other threads end here
+    static const DWORD MainThreadId = GetCurrentThreadId();
+    if (GetCurrentThreadId() != MainThreadId)
+    {
+        ExitThread(0);
+    }
+#else
     if (getpid() != (pid_t)syscall(SYS_gettid))
     {
         pthread_exit(nullptr);
     }
+#endif
 }
 
 void CLinuxNotification::FatalError(LanguageStringID StringID) const

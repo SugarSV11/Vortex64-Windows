@@ -21,7 +21,12 @@
 
 #include <cstdio>
 #include <cstdlib>
+#ifdef _WIN32
+#include <Common/Platform.h>
+#include <unistd.h> // compat shim (usleep)
+#else
 #include <unistd.h>
+#endif
 
 class CLinuxRenderWindow : public RenderWindow
 {
@@ -36,6 +41,42 @@ public:
     }
 };
 
+#ifdef _WIN32
+#include <dbghelp.h>
+#pragma comment(lib, "dbghelp.lib")
+// Crash diagnostics: print the exception and a symbolized stack (uses the .pdb next to the executable)
+static LONG WINAPI CrashHandler(EXCEPTION_POINTERS * ep)
+{
+    fprintf(stderr, "\n[CRASH] exception 0x%08lX at %p\n", ep->ExceptionRecord->ExceptionCode, ep->ExceptionRecord->ExceptionAddress);
+    HANDLE process = GetCurrentProcess();
+    SymSetOptions(SYMOPT_LOAD_LINES | SYMOPT_UNDNAME);
+    SymInitialize(process, nullptr, TRUE);
+    void * frames[48];
+    USHORT n = CaptureStackBackTrace(0, 48, frames, nullptr);
+    char buf[sizeof(SYMBOL_INFO) + 256];
+    for (USHORT i = 0; i < n; i++)
+    {
+        SYMBOL_INFO * s = (SYMBOL_INFO *)buf;
+        s->SizeOfStruct = sizeof(SYMBOL_INFO);
+        s->MaxNameLen = 255;
+        DWORD64 disp = 0;
+        IMAGEHLP_LINE64 line = {sizeof(line)};
+        DWORD ld = 0;
+        if (SymFromAddr(process, (DWORD64)frames[i], &disp, s))
+        {
+            if (SymGetLineFromAddr64(process, (DWORD64)frames[i], &ld, &line))
+                fprintf(stderr, "  #%u %s (%s:%lu)\n", i, s->Name, line.FileName, line.LineNumber);
+            else
+                fprintf(stderr, "  #%u %s +0x%llx\n", i, s->Name, (unsigned long long)disp);
+        }
+        else
+            fprintf(stderr, "  #%u %p\n", i, frames[i]);
+    }
+    fflush(stderr);
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+#endif
+
 static volatile sig_atomic_t g_QuitRequested = 0;
 
 static void OnQuitSignal(int)
@@ -45,6 +86,10 @@ static void OnQuitSignal(int)
 
 int main(int argc, char ** argv)
 {
+    setvbuf(stdout, nullptr, _IONBF, 0); // unbuffered so output survives a crash
+#ifdef _WIN32
+    SetUnhandledExceptionFilter(CrashHandler);
+#endif
     signal(SIGINT, OnQuitSignal);
     signal(SIGTERM, OnQuitSignal);
     // The video plugin (Vortex64-video/Renderer/OGLglitchmain.cpp) needs a
@@ -57,7 +102,9 @@ int main(int argc, char ** argv)
     // the binary itself rather than an easy-to-forget invocation detail.
     // setenv()'s overwrite=0 leaves an explicit caller override (e.g. to
     // test the Wayland driver deliberately) intact.
+#ifndef _WIN32
     setenv("SDL_VIDEODRIVER", "x11", 0);
+#endif
 
     printf("========================================\n");
     printf(" Vortex64 (command line)\n");

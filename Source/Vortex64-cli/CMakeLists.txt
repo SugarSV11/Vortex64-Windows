@@ -21,4 +21,5 @@ set_target_properties(vortex64-cli PROPERTIES
 )
 set_target_properties(Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )

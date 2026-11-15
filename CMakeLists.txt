@@ -40,7 +40,9 @@ add_subdirectory(Source/3rdParty/asmjit)
 add_subdirectory(Source/3rdParty/softfloat-3e)
 add_subdirectory(Source/3rdParty/7zip-decoder)
 add_subdirectory(Source/3rdParty/zlib)
-add_subdirectory(Source/3rdParty/discord-rpc)
+if(NOT WIN32)
+    add_subdirectory(Source/3rdParty/discord-rpc) # TODO(Windows): needs connection_win.cpp
+endif()
 add_subdirectory(Source/3rdParty/zlib/contrib/minizip)
 add_subdirectory(Source/Common)
 add_subdirectory(Source/Vortex64-rsp-core)
@@ -53,13 +55,16 @@ add_subdirectory(Source/Vortex64-input)
 
 # GLideN64 as an alternative video plugin (the submodule is not modified, see Source/GLideN64-linux)
 option(PJ64_GLIDEN64 "Build GLideN64 as a video plugin" ON)
-if(PJ64_GLIDEN64 AND EXISTS ${CMAKE_SOURCE_DIR}/Source/GLideN64/Source/src/Config.cpp)
+if(PJ64_GLIDEN64 AND NOT WIN32 AND EXISTS ${CMAKE_SOURCE_DIR}/Source/GLideN64/Source/src/Config.cpp)
     add_subdirectory(Source/GLideN64-linux)
 endif()
 
 # Frontends
 add_subdirectory(Source/Vortex64-cli)
-add_subdirectory(Source/Vortex64-gui)
+option(VORTEX_BUILD_GUI "Build the Qt6 GUI" ${UNIX})
+if(VORTEX_BUILD_GUI)
+    add_subdirectory(Source/Vortex64-gui)
+endif()
 
 # Ship the real RDB databases (ucode CRC table, per-game settings, etc.)
 # next to the binary instead of leaving the runtime to create empty 0-byte
@@ -109,6 +114,7 @@ add_custom_target(copy-config-rdb ALL
 # ${CMAKE_INSTALL_LIBDIR}/vortex64/ even when launched via the /usr/bin
 # symlink.
 # ---------------------------------------------------------------------------
+if(UNIX)
 include(GNUInstallDirs)
 
 set(P64_INSTALL_APPDIR ${CMAKE_INSTALL_LIBDIR}/vortex64)
@@ -176,7 +182,13 @@ install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/vortex64-mime.xml
 # device, gamepad or real game needed). The ones that do need them (Scripts/linux/run-gui-tests.sh,
 # input-gamepad-test, audio-test) are run by hand.
 # ---------------------------------------------------------------------------
+endif()
+
 enable_testing()
+if(WIN32)
+    add_test(NAME common-test COMMAND common-test)
+endif()
+if(UNIX)
 set(VORTEX_TEST_TARGETS
     common-test migration-test first-run-test settings-test plugindir-test language-test layout-test
     rombrowser-test mainmenu-test vortex-test present-policy-test plugin-config-test
@@ -191,3 +203,5 @@ add_custom_target(check DEPENDS ${VORTEX_EXISTING_TESTS})
 add_test(NAME offscreen-suite
     COMMAND ${CMAKE_SOURCE_DIR}/Scripts/linux/ctest-offscreen.sh ${CMAKE_BINARY_DIR})
 set_tests_properties(offscreen-suite PROPERTIES TIMEOUT 900)
+
+endif()
