@@ -42,7 +42,7 @@ std::string CSettingTypeRomDatabase::DatabasePath(const std::string & ShippedPat
             return ShippedPath;
         }
     }
-    else if (access(UserPath.c_str(), W_OK) != 0)
+    else if (access(UserPath.string().c_str(), W_OK) != 0)
     {
         // a copy made read only (by an older version of this code)
         std::filesystem::permissions(UserPath, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write, std::filesystem::perm_options::add, Error);

@@ -27,7 +27,11 @@ void DiskCommand()
     ltime = time(&ltime);
 
     struct tm result = {0};
+#ifdef _WIN32
+    localtime_s(&result, &ltime);
+#else
     localtime_r(&ltime, &result);
+#endif
 
     // BCD format needed for 64DD RTC
     uint8_t year = (uint8_t)(((result.tm_year / 10 % 10) << 4) | (result.tm_year % 10));

@@ -11,7 +11,11 @@ project(softfloat C)
 # build variant (build/Linux-x86_64-SSE2/... uses the plain, non-M source
 # tree instead) and fail to link/compile against this one.
 set(SOFTFLOAT_SPECIALIZE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/source/8086-SSE)
-set(SOFTFLOAT_BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build/Linux-x86_64-GCC)
+if(MSVC)
+    set(SOFTFLOAT_BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build/Win64-MSVC)
+else()
+    set(SOFTFLOAT_BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build/Linux-x86_64-GCC)
+endif()
 
 add_library(softfloat STATIC
     source/bf16_isSignalingNaN.c
@@ -332,7 +336,9 @@ target_include_directories(softfloat PRIVATE
     ${SOFTFLOAT_SPECIALIZE_DIR}
     ${SOFTFLOAT_BUILD_DIR}
 )
-target_compile_options(softfloat PRIVATE -fno-strict-aliasing -Wno-unused-but-set-variable)
+if(NOT MSVC)
+    target_compile_options(softfloat PRIVATE -fno-strict-aliasing -Wno-unused-but-set-variable)
+endif()
 # Matches build/Linux-x86_64-GCC/Makefile's COMPILE_C/SOFTFLOAT_OPTS exactly:
 # SOFTFLOAT_FAST_INT64 in particular is required for primitiveTypes.h to
 # define `struct uint128` at all, which opts-GCC.h's SSE2/int128 intrinsics

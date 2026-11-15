@@ -20,3 +20,20 @@ Divergencias / pendientes conocidos (no ocultos):
 - `path.cpp`: bloqueo de migración (`flock`) y `fchmod` son no-op en Windows.
 - Corrección a la auditoría: las ramas `_WIN32` de `Common` **no** se conservaron en el port Linux; se escribieron nuevas.
 - No se ha configurado aún el árbol completo (vcpkg: SDL2/Qt6/libpng), ni compilado core/RSP/plugins/GUI.
+
+## Hito 2: `Vortex64-rsp-core` y `Vortex64-core` compilan y enlazan con MSVC x64 (Debug)
+Compilados como proyecto aislado (asmjit, softfloat, 7zip-decoder, zlib, minizip, Common, rsp-core, core, Settings).
+**Solo compilación/enlazado; no se ha ejecutado ninguna prueba del núcleo ni emulado nada todavía.**
+
+Cambios:
+- `Vortex64-plugin-spec/Base.h`: `EXPORT` = `__declspec(dllexport)` en Windows (`Settings.cpp` igual).
+- `RspProfiling.cpp`: `<intrin.h>`, afinidad con `SetThreadAffinityMask`. `RspSystem.cpp`/`x64ops.cpp`: `__builtin_trap` -> `__debugbreak`.
+- `RecompilerMemory.cpp`: reserva cercana a RDRAM con `VirtualAlloc(MEM_RESERVE)` en la dirección pedida (alineada a 64 KB).
+  **Por verificar en ejecución:** que el JIT consiga la reserva a <=2 GB de RDRAM (rip-relative).
+- `AudioPlugin.cpp`: prioridad `THREAD_PRIORITY_TIME_CRITICAL` (en vez de SCHED_FIFO). `Disk.cpp`: `localtime_s`.
+- `Common/Windows/compat/cxxabi.h`: `__forced_unwind` ficticio (nunca se lanza; ver divergencia de `Terminate()`).
+- SoftFloat: nuevo `build/Win64-MSVC/platform.h` (derivado del de Linux, modificado; sin `__int128` ni `__builtin_clz`, rutas genéricas).
+  **Por verificar:** corrección numérica de esa variante con tests.
+- `__PRETTY_FUNCTION__` -> `__FUNCSIG__` vía definición de compilación en `Common`.
+
+Pendiente: plugins (video/audio/input/RSP) como DLL, CLI, GUI Qt6, tests del núcleo, ejecución con ROM, CI.

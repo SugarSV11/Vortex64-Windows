@@ -9,7 +9,11 @@
 #include <Vortex64-core/N64System/SystemGlobals.h>
 #include <Vortex64-core/Plugins/AudioPlugin.h>
 #include <Vortex64-plugin-spec/Audio.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <pthread.h>
+#endif
 
 CAudioPlugin::CAudioPlugin() :
     AiLenChanged(nullptr),
@@ -213,9 +217,13 @@ void * CAudioPlugin::AudioThread(void * param)
         return nullptr;
     }
 
+#ifdef _WIN32
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#else
     struct sched_param schedParam;
     schedParam.sched_priority = sched_get_priority_max(SCHED_FIFO);
     pthread_setschedparam(pthread_self(), SCHED_FIFO, &schedParam);
+#endif
     while (!_this->m_StopAudioThread)
     {
         // The SDL driver has no event to block on, so poll instead of Wait

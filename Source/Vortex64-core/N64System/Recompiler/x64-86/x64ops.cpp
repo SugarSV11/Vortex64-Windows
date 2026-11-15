@@ -135,7 +135,11 @@ void CX64Ops::AddLabelSymbol(const asmjit::Label & Label, const char * Symbol)
         }
         else
         {
+#ifdef _MSC_VER
+            __debugbreak();
+#else
             __builtin_trap();
+#endif
         }
     }
     else

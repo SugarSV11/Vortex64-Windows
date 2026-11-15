@@ -2,6 +2,7 @@
 
 #include "RspProfiling.h"
 #pragma warning(disable : 4786)
+#include <Common/Platform.h>
 #include <Common/File.h>
 #include <Common/Log.h>
 #include <Common/StdString.h>
@@ -11,11 +12,17 @@
 #include <chrono>
 // __rdtsc()/_mm_lfence() come from <intrin.h> on MSVC and <x86intrin.h> on
 // GCC/Clang.
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
 #include <x86intrin.h>
+#endif
 #include <map>
 #include <thread>
 #include <vector>
+#ifndef _WIN32
 #include <sched.h>
+#endif
 
 class CRspProfiling
 {
@@ -95,6 +102,10 @@ public:
         // thread when used with the thread's tid, but for a whole-process
         // pin here getpid() matches what the Windows side does with the
         // current thread's process-wide affinity mask).
+#ifdef _WIN32
+        // Windows: pin the calling thread to the CPU it is on (SetThreadAffinityMask)
+        const DWORD_PTR oldMask = SetThreadAffinityMask(GetCurrentThread(), (DWORD_PTR)1 << GetCurrentProcessorNumber());
+#else
         cpu_set_t oldMask;
         CPU_ZERO(&oldMask);
         sched_getaffinity(0, sizeof(oldMask), &oldMask);
@@ -102,12 +113,17 @@ public:
         CPU_ZERO(&pinnedMask);
         CPU_SET(0, &pinnedMask);
         sched_setaffinity(0, sizeof(pinnedMask), &pinnedMask);
+#endif
         auto start_time = std::chrono::high_resolution_clock::now();
         uint64_t start_cycles = __rdtsc();
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         uint64_t end_cycles = __rdtsc();
         auto end_time = std::chrono::high_resolution_clock::now();
+#ifdef _WIN32
+        if (oldMask != 0) { SetThreadAffinityMask(GetCurrentThread(), oldMask); }
+#else
         sched_setaffinity(0, sizeof(oldMask), &oldMask);
+#endif
         double elapsed_seconds = std::chrono::duration<double>(end_time - start_time).count();
         uint64_t elapsed_cycles = end_cycles - start_cycles;
         return static_cast<double>(elapsed_cycles) / (elapsed_seconds * 1e9);

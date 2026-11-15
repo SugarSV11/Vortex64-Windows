@@ -6,7 +6,13 @@ extern "C" {
 #endif
 
 #ifndef EXPORT
+#if defined(_WIN32)
 #if defined(__cplusplus)
+#define EXPORT extern "C" __declspec(dllexport)
+#else
+#define EXPORT __declspec(dllexport)
+#endif
+#elif defined(__cplusplus)
 #define EXPORT extern "C" __attribute__((visibility("default")))
 #else
 #define EXPORT __attribute__((visibility("default")))

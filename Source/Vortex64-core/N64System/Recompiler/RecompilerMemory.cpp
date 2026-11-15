@@ -4,7 +4,11 @@
 #include <Vortex64-core/N64System/Recompiler/Recompiler.h>
 #include <Vortex64-core/N64System/Recompiler/RecompilerMemory.h>
 #include <Vortex64-core/N64System/SystemGlobals.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <sys/mman.h>
+#endif
 #include <stdint.h>
 
 // The generated code addresses RDRAM (and other emulator memory) with rip-relative
@@ -29,6 +33,15 @@ static uint8_t * AllocateNearAddress(size_t Size, uint8_t * Reference)
             {
                 continue;
             }
+#ifdef _WIN32
+            // reserve exactly at the hint (64KB allocation granularity); fails if the range is taken
+            Hint &= ~(uintptr_t)0xFFFF;
+            void * Ptr = VirtualAlloc((void *)Hint, Size, MEM_RESERVE, PAGE_NOACCESS);
+            if (Ptr != nullptr)
+            {
+                return (uint8_t *)Ptr;
+            }
+#else
             void * Ptr = mmap((void *)Hint, Size, PROT_NONE, MAP_PRIVATE | MAP_ANON | MAP_FIXED_NOREPLACE, -1, 0);
             if (Ptr == MAP_FAILED)
             {
@@ -39,6 +52,7 @@ static uint8_t * AllocateNearAddress(size_t Size, uint8_t * Reference)
                 return (uint8_t *)Ptr;
             }
             munmap(Ptr, Size);
+#endif
         }
     }
     return nullptr;

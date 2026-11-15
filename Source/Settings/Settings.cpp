@@ -4,7 +4,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef _WIN32
+#define EXPORT      extern "C" __declspec(dllexport)
+#else
 #define EXPORT      extern "C" __attribute__((visibility("default")))
+#endif
 #define CALL
 
 CNotification g_NotifyLocal;

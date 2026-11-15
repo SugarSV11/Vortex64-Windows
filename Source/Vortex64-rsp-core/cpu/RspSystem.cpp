@@ -399,7 +399,12 @@ void CRSPSystem::DumpSyncErrors(void)
     }
 
     Log.Flush();
+#ifdef _MSC_VER
+    __debugbreak();
+    abort();
+#else
     __builtin_trap();
+#endif
 }
 
 bool CRSPSystem::BasicSyncCheck(void)
