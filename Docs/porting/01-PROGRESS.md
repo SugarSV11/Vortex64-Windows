@@ -177,3 +177,9 @@ Ver `Docs/development/TESTING.md`. `ctest`: 9/9 pruebas (common, core, rsp, 2x c
 - `jit-fuzz-test` (de la suite Linux) portado a Windows sin cambios de lógica (sin X11).
 - El supuesto erróneo de una de mis pruebas (el RSP no respeta un presupuesto de ciclos con bucle infinito) se corrigió: `DoRspCycles` no mira el bit de halt.
 - El INI acortado no deja restos en la prueba aislada (la línea `n` del Project64.cfg real sigue sin explicación).
+
+## Mando (2026-11-15): NO verificado - no hay ningún mando conectado
+SDL (`SDL_NumJoysticks`) y el listado de dispositivos de Windows no detectan ningún mando en esta máquina, así que el camino
+SDL GameController -> plugin de entrada -> juego **no se ha podido probar**. Añadida la herramienta manual `gamepad-probe`
+(`cmake --build --preset windows-msvc-release --target gamepad-probe`; `bin\gamepad-probe.exe [segundos]`), que lista los mandos y
+muestra sus eventos; sin mando termina con código 2. Pendiente: conectar un mando, comprobar con la herramienta y luego jugar con él en Vortex64.

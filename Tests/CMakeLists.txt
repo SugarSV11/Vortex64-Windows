@@ -46,3 +46,11 @@ file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/test-appdata ${CMAKE_BINARY_DIR}/test-lo
 foreach(T ${ALL_TESTS})
     set_property(TEST ${T} APPEND PROPERTY ENVIRONMENT "APPDATA=${CMAKE_BINARY_DIR}/test-appdata" "LOCALAPPDATA=${CMAKE_BINARY_DIR}/test-localappdata")
 endforeach()
+
+# manual tool (not a ctest test): lists controllers and prints their events
+find_package(SDL2 CONFIG QUIET)
+if(TARGET SDL2::SDL2)
+    add_executable(gamepad-probe EXCLUDE_FROM_ALL gamepad_probe.cpp)
+    target_link_libraries(gamepad-probe PRIVATE SDL2::SDL2 SDL2::SDL2main)
+    set_target_properties(gamepad-probe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+endif()
