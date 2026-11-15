@@ -1,6 +1,10 @@
 #include "Rsp.h"
 #include <stdint.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
 typedef uint32_t DWORD;
+#endif
 
 #define MaxBPoints 0x30
 

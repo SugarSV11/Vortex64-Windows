@@ -37,3 +37,10 @@ Cambios:
 - `__PRETTY_FUNCTION__` -> `__FUNCSIG__` vía definición de compilación en `Common`.
 
 Pendiente: plugins (video/audio/input/RSP) como DLL, CLI, GUI Qt6, tests del núcleo, ejecución con ROM, CI.
+
+## Hito 3: plugin RSP (`Vortex64-rsp.dll`) compila y enlaza con MSVC x64
+Verificado con `dumpbin /exports`: exporta CloseDLL, DllAbout, DoRspCycles, GetDllInfo, InitiateRSP, RomOpen, RomClosed, SetSettingInfo*, etc.
+No se ha cargado aún desde el emulador (solo compilación/enlazado/exports).
+- `breakpoint.h`: `DWORD` real de `windows.h`; `RSPDebuggerUI.cpp`: `ExitThread` en vez de `pthread_exit`.
+- Pendiente: la UI de depuración RSP sigue siendo stubs (como en Linux).
+- En curso: vcpkg (SDL2, libpng) para los plugins de vídeo/audio/input.

@@ -11,7 +11,11 @@
 #include <Vortex64-rsp/Debugger/RSPRegistersUI.h>
 #include <Vortex64-rsp/RSP Command.h>
 #include <Vortex64-rsp/breakpoint.h>
+#ifdef _WIN32
+#include <Common/Platform.h>
+#else
 #include <pthread.h>
+#endif
 
 RSPDebuggerUI::RSPDebuggerUI(CRSPSystem & System) :
     m_System(System),
@@ -115,7 +119,11 @@ void RSPDebuggerUI::UnknownOpcode(void)
         fputs(Message, stderr);
         fputc('\n', stderr);
     }
+#ifdef _WIN32
+    ExitThread(0);
+#else
     pthread_exit(nullptr);
+#endif
 }
 
 void RSPDebuggerUI::RDP_LogMF0(uint32_t PC, uint32_t Reg)
