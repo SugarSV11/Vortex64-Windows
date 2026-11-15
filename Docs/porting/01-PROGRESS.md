@@ -141,3 +141,18 @@ NO verificado todavía: ventanas de Ajustes y de configuración de plugins (Qt) 
 los tests de la GUI de Linux (X11/XTest) no se construyen en Windows. Avisos de Qt en stderr: "QImage::scaled: Image is a null image"
 (posible icono/imagen que no carga: pendiente de investigar). `ScriptShimTerminateProcesses` es un stub (los procesos de `exec()` no se
 terminan al cerrar). Instancia única sigue sin implementar en Windows.
+
+## Hito 12: ventanas de Ajustes y de configuración de plugins verificadas (2026-11-15)
+Probado con el ejecutable Release: abrir Ajustes (General, Gráficos, Audio, Input, RSP, Plugins, Atajos, 64DD, Avanzado) y pulsar
+"Configurar..." de los plugins de vídeo, audio e input (módulos Qt cargados con LoadLibrary; capturas con PrintWindow):
+- Vídeo: "Glide64 settings" (resolución en ventana, vsync, OpenGL, FBO...).
+- Audio: "Settings" (volumen, silencio).
+- Input: asignación de teclas/mando de los 4 controles (Start = Intro, A = X, B = C, Z = Z, stick = teclado numérico...).
+
+**Bug real encontrado y corregido:** el shim `Common/Windows/compat/dirent.h` buscaba con el patrón `bin*` en vez de `bin\*`
+(se perdió una barra), de modo que `opendir/readdir` devolvía solo 1 entrada. Efecto visible: los selectores de plugin de la GUI
+salían vacíos ("Ningún plugin seleccionado"); también afectaba a cualquier enumeración de ficheros/carpetas (`CPath::FindFirst`).
+Tras el arreglo la lista muestra Project64 Video/Audio/Input y RSP con sus DLL.
+
+Sigue sin verificar: cambiar plugin/ajustes y que se apliquen y persistan, escaneo de carpetas de ROMs en la biblioteca (probable que
+fallara por el mismo bug; hay que reprobar), trucos, depurador, scripts JS, pantalla completa, mando, DPI alto.

@@ -28,7 +28,7 @@ static inline DIR * opendir(const char * path)
     std::wstring w(n - 1, L'\0');
     MultiByteToWideChar(CP_UTF8, 0, path, -1, &w[0], n);
     if (!w.empty() && (w.back() == L'/' || w.back() == L'\\')) w.pop_back();
-    w += L"\*";
+    w += L"/*";
     DIR * d = new DIR();
     d->h = FindFirstFileW(w.c_str(), &d->data);
     if (d->h == INVALID_HANDLE_VALUE) { delete d; return nullptr; }
