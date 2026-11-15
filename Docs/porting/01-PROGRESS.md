@@ -44,3 +44,12 @@ No se ha cargado aún desde el emulador (solo compilación/enlazado/exports).
 - `breakpoint.h`: `DWORD` real de `windows.h`; `RSPDebuggerUI.cpp`: `ExitThread` en vez de `pthread_exit`.
 - Pendiente: la UI de depuración RSP sigue siendo stubs (como en Linux).
 - En curso: vcpkg (SDL2, libpng) para los plugins de vídeo/audio/input.
+
+## Hito 4: plugins de audio (`Vortex64-audio.dll`, SDL2) e input (`Vortex64-input.dll`, SDL2) compilan y enlazan con MSVC
+SDL2 2.32.10 vía vcpkg (x64-windows). Solo compilación/enlazado; sin carga ni prueba con dispositivos reales.
+- `Common/Windows/compat/dlfcn.h`: dlopen/dlsym/dladdr sobre LoadLibrary (usado por los plugins para cargar el módulo Qt de configuración).
+- CMake de audio/input/vídeo: `find_package(SDL2 CONFIG)` en Windows, `pkg-config` en Linux.
+- `Win32CompatTypes.h`: en Windows usa `<windows.h>` real (los tipos falsos chocaban).
+- El audio usa el backend SDL2 (no DirectSound; sigue disponible en `Driver/DirectSound.cpp` sin integrar).
+- Input: `Win32KeyboardScan_Linux.cpp` es un no-op; en Windows no se añaden teclas extra que antes aportaba `GetAsyncKeyState`. Pendiente decidir.
+- Pendiente: plugin de vídeo (134 ficheros, GLX/libpng/OpenGL), CLI, GUI Qt6.

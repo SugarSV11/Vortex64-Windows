@@ -9,6 +9,13 @@
 // declared; real Win32 headers are used unchanged on Windows.
 #pragma once
 
+#ifdef _WIN32
+// Vortex64-Windows: the real Win32 headers are used unchanged
+#include <windows.h>
+#include <cstdint>
+#include <cstring>
+#else
+
 #include <cstdint>
 #include <cstring>
 
@@ -62,4 +69,4 @@ inline bool operator!=(const GUID & a, const GUID & b)
 {
     return !(a == b);
 }
-
+#endif

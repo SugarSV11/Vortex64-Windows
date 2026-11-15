@@ -79,8 +79,16 @@ add_library(Vortex64-video SHARED
     TextureEnhancer/tc-1.1+/texstore.c
 )
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(SDL2 REQUIRED sdl2)
+find_package(PkgConfig QUIET)
+if(WIN32)
+    find_package(SDL2 CONFIG REQUIRED)
+    set(SDL2_LIBRARIES SDL2::SDL2)
+    set(SDL2_INCLUDE_DIRS "")
+    set(SDL2_LIBRARY_DIRS "")
+    set(SDL2_CFLAGS_OTHER "")
+else()
+    pkg_check_modules(SDL2 REQUIRED sdl2)
+endif()
 find_package(PNG REQUIRED)
 find_package(ZLIB REQUIRED)
 # Prefer the legacy libGL.so.1 over GLVND's libOpenGL.so/libGLX.so: the

@@ -13,8 +13,16 @@ add_library(Vortex64-input SHARED
     Win32KeyboardScan_Linux.cpp
 )
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(SDL2 REQUIRED sdl2)
+find_package(PkgConfig QUIET)
+if(WIN32)
+    find_package(SDL2 CONFIG REQUIRED)
+    set(SDL2_LIBRARIES SDL2::SDL2)
+    set(SDL2_INCLUDE_DIRS "")
+    set(SDL2_LIBRARY_DIRS "")
+    set(SDL2_CFLAGS_OTHER "")
+else()
+    pkg_check_modules(SDL2 REQUIRED sdl2)
+endif()
 
 target_include_directories(Vortex64-input PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/..
