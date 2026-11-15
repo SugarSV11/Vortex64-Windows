@@ -98,3 +98,18 @@ rendimiento (Debug, sin medir), save states/SRAM, otros juegos, ni compilación 
 - **Teclado:** al enviar Enter (Start por defecto, scancode 28) al emulador, SM64 pasa de la pantalla de título a "SELECT FILE"
   (capturas antes/después). Confirma la ruta de entrada por teclado hasta el juego.
 - **Pendiente:** mando (SDL GameController) sin probar por no haber mando conectado en la prueba; resto de botones/analógico; latencia.
+
+## Hito 9: build Release y velocidad (2026-11-15)
+`cmake --preset windows-msvc-release` + build: compila y enlaza completo (664 pasos).
+Velocidad medida con "Display Frame Rate" (VI/s reportados por el núcleo), SM64 (USA), AMD RX 9060 XT, ventana por defecto:
+
+| Build | CPU | VI/s (muestras) |
+|---|---|---|
+| Release | JIT | 59.5 - 63.9 (~60) |
+| Debug | JIT | 59.1 - 60.8 (~60) |
+| Release | intérprete | 58.8 - 60.9 (~60) |
+| Debug | intérprete | 58.4 - 59.9 (~60) |
+
+Los cuatro casos van a velocidad completa (60 VI/s) en esta escena (pantalla de título/demo); el limitador de fotogramas satura la
+medida, así que **no** hay datos de margen de rendimiento ni de escenas pesadas. Para medirlo hay que desactivar el limitador y
+probar escenas de juego. Pendiente: optimización, perfilado, otros juegos.
