@@ -113,3 +113,12 @@ Velocidad medida con "Display Frame Rate" (VI/s reportados por el núcleo), SM64
 Los cuatro casos van a velocidad completa (60 VI/s) en esta escena (pantalla de título/demo); el limitador de fotogramas satura la
 medida, así que **no** hay datos de margen de rendimiento ni de escenas pesadas. Para medirlo hay que desactivar el limitador y
 probar escenas de juego. Pendiente: optimización, perfilado, otros juegos.
+
+## Hito 10: CI y paquete portable (2026-11-15)
+- `packaging/windows/package.ps1`: genera `dist/Vortex64-Windows-<ver>-x64.zip` (3.5 MB) + SHA256 con exe, 4 plugins, SDL2/libpng/zlib,
+  runtime MSVC app-local, Config/Lang/Scripts, LICENSE, THIRD_PARTY_NOTICES y licenses/.
+  **Verificado:** el ZIP extraído en otra carpeta ejecuta SM64 con el JIT a ~60 VI/s.
+- `.github/workflows/windows.yml` (windows-latest, MSVC, vcpkg, build Release, common-test, empaquetado, artefacto y release en tags).
+  **NO ejecutado:** el repositorio remoto no existe aún, así que el workflow no se ha probado en GitHub.
+- Los workflows Linux heredados quedan solo manuales (`workflow_dispatch`).
+- `vcpkg.json` no fija `builtin-baseline`: las versiones de dependencias no son reproducibles todavía.

@@ -1,3 +1,5 @@
+> **Vortex64-Windows** es el port a Windows (x64, MSVC) de Vortex64. Estado actual: línea de comandos + plugins; SM64 (USA) corre con intérprete y JIT, con vídeo, audio y teclado verificados; **sin GUI todavía**. Detalles en [`Docs/porting/01-PROGRESS.md`](Docs/porting/01-PROGRESS.md) y cómo compilar en [`Docs/development/BUILD-WINDOWS.md`](Docs/development/BUILD-WINDOWS.md). Las instrucciones de abajo son las del proyecto original para Linux.
+
 # Vortex64
 
 **Emulador de Nintendo 64 nativo para Linux** · *Native Nintendo 64 emulator for Linux*

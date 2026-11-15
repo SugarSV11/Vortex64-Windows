@@ -1,9 +1,8 @@
 name: Build (Linux)
 
+# Vortex64-Windows: inherited from the Linux project; manual only (the Windows workflow is windows.yml). Not validated for this repository.
 on:
-  push:
-    branches: [main, master]
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   build:

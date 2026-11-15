@@ -1,0 +1,60 @@
+name: Build (Windows)
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # to attach the portable ZIP to a release on tags
+
+jobs:
+  windows-x64:
+    runs-on: windows-latest
+    env:
+      VCPKG_ROOT: C:\vcpkg
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up MSVC (x64)
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Cache vcpkg binaries
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\vcpkg\archives
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+
+      - name: Configure (Release)
+        run: cmake --preset windows-msvc-release
+
+      - name: Build (Release)
+        run: cmake --build --preset windows-msvc-release
+
+      - name: Tests (common-test)
+        run: |
+          cmake --build --preset windows-msvc-release --target common-test
+          ctest --test-dir build/windows-msvc-release --output-on-failure
+
+      - name: Package portable ZIP
+        shell: pwsh
+        run: ./packaging/windows/package.ps1 -Version "${{ github.ref_type == 'tag' && github.ref_name || github.sha }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Vortex64-Windows-x64
+          path: |
+            dist/*.zip
+            dist/*.sha256
+
+      - name: Attach to release (tags only)
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.zip
+            dist/*.sha256

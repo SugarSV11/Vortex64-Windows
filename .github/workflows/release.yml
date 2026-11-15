@@ -1,8 +1,7 @@
 name: Release (AppImage)
 
+# Vortex64-Windows: inherited from the Linux project; manual only (Windows releases come from windows.yml). Not validated for this repository.
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
 
 permissions:

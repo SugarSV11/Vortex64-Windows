@@ -148,3 +148,8 @@ Thumbs.db
 /build*/
 Vortex64-x86_64.AppImage
 build*/
+
+# Vortex64-Windows
+/build/
+/dist/
+/vcpkg_installed/
