@@ -53,3 +53,11 @@ SDL2 2.32.10 vía vcpkg (x64-windows). Solo compilación/enlazado; sin carga ni 
 - El audio usa el backend SDL2 (no DirectSound; sigue disponible en `Driver/DirectSound.cpp` sin integrar).
 - Input: `Win32KeyboardScan_Linux.cpp` es un no-op; en Windows no se añaden teclas extra que antes aportaba `GetAsyncKeyState`. Pendiente decidir.
 - Pendiente: plugin de vídeo (134 ficheros, GLX/libpng/OpenGL), CLI, GUI Qt6.
+
+## Hito 5: plugin de vídeo (`Vortex64-video.dll`) compila y enlaza con MSVC; los 4 plugins ya son DLL
+- `rdp.h`: `DECLAREALIGN16VAR` con `__declspec(align(16))`; `opengl.h`: incluye `<windows.h>` antes de `<GL/gl.h>`.
+- `GLXDrawable.cpp`: en Windows devuelve `false` (se usa `SDL_GL_GetDrawableSize`).
+- MSVC: `NO_ASM` -> rutas C portables de `3dmath.cpp` (el asm inline era 32-bit/GCC). **Rendimiento no medido.**
+- **Sin probar:** creación del contexto OpenGL, `SDL_CreateWindowFrom(HWND)` embebido, ningún renderizado.
+- No incluido: GLideN64 (desactivado en presets; hace falta su capa Win32/WGL o SDL2).
+- Pendiente: CLI, árbol CMake completo con presets (hasta ahora se compila con un proyecto de prueba aparte), GUI Qt6, ejecución con ROM.

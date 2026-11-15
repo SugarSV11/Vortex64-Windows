@@ -5,6 +5,9 @@ extern "C"
 {
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <GL/gl.h>              // Header file for the OpenGL library
 
 #ifndef APIENTRY

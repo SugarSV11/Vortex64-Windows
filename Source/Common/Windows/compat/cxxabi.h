@@ -7,3 +7,4 @@ struct __forced_unwind
 {
 };
 } // namespace __cxxabiv1
+namespace abi = __cxxabiv1;

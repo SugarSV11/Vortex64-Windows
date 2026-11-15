@@ -86,7 +86,9 @@ const unsigned int maxCMDMask = MAXCMD - 1;
 #define uc(x) coord[x<<1]
 #define vc(x) coord[(x<<1)+1]
 
-#if   defined(__GNUG__)
+#if defined(_MSC_VER)
+#define DECLAREALIGN16VAR(var) __declspec(align(16)) float (var)
+#elif defined(__GNUG__)
 #define DECLAREALIGN16VAR(var) float (var) __attribute__ ((aligned(16)))
 #endif
 

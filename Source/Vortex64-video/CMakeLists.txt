@@ -109,6 +109,10 @@ target_include_directories(Vortex64-video PRIVATE
     ${P64V_GENERATED_DIR}
 )
 
+if(MSVC)
+    # the legacy inline asm is 32-bit MSVC / GCC only; use the portable C paths
+    target_compile_definitions(Vortex64-video PRIVATE NO_ASM)
+endif()
 set_target_properties(Vortex64-video PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 target_link_libraries(Vortex64-video PRIVATE

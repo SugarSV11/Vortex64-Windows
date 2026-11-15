@@ -3,6 +3,13 @@
 // toolkit that owns the window does not always leave to it, so SDL_GL_GetDrawableSize can be stale
 // after the GUI changes the size (full screen). Separate from OGLglitchmain.cpp because that
 // includes headers that define macros over the names of OpenGL.
+#ifdef _WIN32
+// Vortex64-Windows: no GLX; the caller falls back to SDL_GL_GetDrawableSize
+bool PJ64_GLXDrawableSize(int &, int &)
+{
+    return false;
+}
+#else
 #include <GL/glx.h>
 
 bool PJ64_GLXDrawableSize(int & width, int & height)
@@ -24,3 +31,4 @@ bool PJ64_GLXDrawableSize(int & width, int & height)
     height = static_cast<int>(h);
     return true;
 }
+#endif
