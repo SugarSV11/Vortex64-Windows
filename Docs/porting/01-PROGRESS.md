@@ -77,3 +77,16 @@ lo que dejaba sin crear el INI de ajustes y provocaba un acceso nulo en `CIniFil
 buffers de ruta son mayores (antes 260). Añadido manejador de crashes con pila simbolizada en la CLI (usa el .pdb).
 
 Pendiente: probar con ROM real (CPU/RSP/vídeo/audio/entrada), JIT (`--recompiler`), GUI Qt6, CI, paquete portable.
+
+## Hito 7: Super Mario 64 (USA) corre en Windows con intérprete y con JIT (2026-11-15)
+ROM aportada por el usuario (8 MB, .z64; no se incluye en el repositorio). Build Debug, MSVC x64, GPU AMD Radeon RX 9060 XT.
+Verificado con capturas de la ventana del emulador y logs:
+- `--interpreter`: pantalla de título (cabeza de Mario) renderizada; 40 s estable.
+- `--recompiler` (JIT x64): modo demo (Bowser, "PRESS START") renderizado; 60 s estable.
+
+Bug real del JIT corregido: `X64Abi::Arg0..Arg3` estaban fijados a la convención System V (rdi, rsi, rdx, rcx). En Windows x64
+son rcx, rdx, r8, r9: el JIT llamaba a funciones miembro con `this` erróneo -> acceso a 0xFFFF...FFFF en `LW_VAddr32`.
+Ahora dependen de `_WIN32` (`x64ops.h`). El shadow space de 32 bytes ya estaba reservado en las llamadas.
+
+NO verificado todavía: audio (no se ha comprobado que suene), entrada (teclado/mando), juego más allá de la demo,
+rendimiento (Debug, sin medir), save states/SRAM, otros juegos, ni compilación Release.

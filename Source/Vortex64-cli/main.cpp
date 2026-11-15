@@ -89,6 +89,18 @@ int main(int argc, char ** argv)
     setvbuf(stdout, nullptr, _IONBF, 0); // unbuffered so output survives a crash
 #ifdef _WIN32
     SetUnhandledExceptionFilter(CrashHandler);
+    // First-chance handler: fatal exceptions in emulation threads (e.g. JIT code) are reported with a stack too
+    AddVectoredExceptionHandler(1, [](EXCEPTION_POINTERS * ep) -> LONG {
+        const DWORD c = ep->ExceptionRecord->ExceptionCode;
+        if (c == EXCEPTION_ACCESS_VIOLATION || c == EXCEPTION_ILLEGAL_INSTRUCTION || c == EXCEPTION_STACK_OVERFLOW ||
+            c == EXCEPTION_PRIV_INSTRUCTION || c == EXCEPTION_INT_DIVIDE_BY_ZERO || c == EXCEPTION_IN_PAGE_ERROR)
+        {
+            fprintf(stderr, "[CRASH] fault info: type=%llu addr=%p rip=%p\n", (unsigned long long)ep->ExceptionRecord->ExceptionInformation[0],
+                    (void *)ep->ExceptionRecord->ExceptionInformation[1], (void *)ep->ContextRecord->Rip);
+            return CrashHandler(ep) == EXCEPTION_EXECUTE_HANDLER ? (ExitProcess(139), EXCEPTION_CONTINUE_SEARCH) : EXCEPTION_CONTINUE_SEARCH;
+        }
+        return EXCEPTION_CONTINUE_SEARCH;
+    });
 #endif
     signal(SIGINT, OnQuitSignal);
     signal(SIGTERM, OnQuitSignal);
