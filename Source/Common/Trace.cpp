@@ -7,7 +7,9 @@
 #include <ctime>
 #include <map>
 #include <vector>
+#ifndef _WIN32
 #include <sys/time.h>
+#endif
 
 typedef std::map<uint32_t, stdstr> ModuleNameMap;
 
@@ -237,11 +239,18 @@ void CTraceFileLog::Write(uint32_t module, uint8_t severity, const char * /*file
     ltime = time(&ltime);
 
     struct tm result = {0};
+#ifdef _WIN32
+    localtime_s(&result, &ltime);
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    int milliseconds = st.wMilliseconds;
+#else
     localtime_r(&ltime, &result);
 
     struct timeval curTime;
     gettimeofday(&curTime, nullptr);
     int milliseconds = curTime.tv_usec / 1000;
+#endif
 
     stdstr_f timestamp("%04d/%02d/%02d %02d:%02d:%02d.%03d %05d,", result.tm_year + 1900, result.tm_mon + 1, result.tm_mday, result.tm_hour, result.tm_min, result.tm_sec, milliseconds, CThread::GetCurrentThreadId());
 

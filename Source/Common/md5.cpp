@@ -1,4 +1,5 @@
 #include <cstring>
+#include "Platform.h"
 /*
 
 MD5.CC - source code for the C++/object oriented translation and modification of MD5.

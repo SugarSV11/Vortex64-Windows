@@ -1,5 +1,19 @@
 #pragma once
 
+#ifdef _WIN32
+// Vortex64-Windows: the MSVC CRT provides these natively
+#include <malloc.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <stdarg.h>
+#include <windows.h>
+#ifndef __PRETTY_FUNCTION__
+#define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+#else
 #include <alloca.h>
 #include <cmath>
 #include <cstdio>
@@ -48,6 +62,8 @@ typedef const char * LPCSTR;
 typedef unsigned long ULONG;
 void _splitpath(const char * path, char * drive, char * dir, char * fname, char * ext);
 
+
+#endif
 
 // 7z archives as ROMs: upstream enables them for Windows only (its other target, Android, has no
 // C7zip), but the decoder (3rdParty/7zip) builds on Linux too

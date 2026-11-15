@@ -1,7 +1,5 @@
 #pragma once
 
-#include <strings.h>
-
 #include "CriticalSection.h"
 #include "File.h"
 #include "Platform.h"

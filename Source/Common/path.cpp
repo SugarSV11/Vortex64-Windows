@@ -17,6 +17,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "Platform.h"
+#ifdef _WIN32
+// Vortex64-Windows: the migration lock is advisory; no flock on Windows (single user-profile copy at a time is not enforced yet)
+#define LOCK_EX 0
+#define LOCK_UN 0
+static inline int flock(int, int) { return 0; }
+static inline int fchmod(int, int) { return 0; } // permissions are not copied on Windows
+#endif
 
 // g_ModuleLogLevel may be nullptr while AppInit() is still in session in path.cpp.
 // The added check to compare to nullptr here is at least a temporary workaround.
@@ -33,6 +40,13 @@
 const char * const DIR_DOUBLEDELIM = "//";
 const char DIRECTORY_DELIMITER = '/';
 const char DIRECTORY_DELIMITER2 = '\\';
+#ifdef _WIN32
+static inline bool MakeDirWin(const char * p) { return _mkdir(p) == 0; }
+#define MakeDir MakeDirWin
+#else
+static inline bool MakeDirPosix(const char * p) { return mkdir(p, S_IRWXU) == 0; }
+#define MakeDir MakeDirPosix
+#endif
 const char EXTENSION_DELIMITER = '.';
 void * CPath::m_hInst = nullptr;
 
@@ -60,6 +74,18 @@ void * CPath::GethInst()
 // fall back to ~/.config and ~/.local/share respectively. $HOME itself isn't
 // expected to be unset on any real Linux desktop session; if it somehow is,
 // fall back to the current directory rather than crash on an empty path.
+#ifdef _WIN32
+// Vortex64-Windows: %APPDATA% / %LOCALAPPDATA% replace the XDG directories
+static std::string WinEnvDir(const char * Var)
+{
+    const char * V = getenv(Var);
+    std::string R = (V != nullptr && V[0] != '\0') ? V : ".";
+    for (char & c : R) { if (c == '\\') c = '/'; }
+    return R;
+}
+std::string CPath::XdgConfigHome() { return WinEnvDir("APPDATA"); }
+std::string CPath::XdgDataHome() { return WinEnvDir("LOCALAPPDATA"); }
+#else
 std::string CPath::XdgConfigHome()
 {
     const char * XdgDir = getenv("XDG_CONFIG_HOME");
@@ -90,6 +116,8 @@ std::string CPath::XdgDataHome()
     }
     return ".";
 }
+
+#endif
 
 std::string CPath::UserConfigDir()
 {
@@ -845,8 +873,22 @@ void CPath::CurrentDirectory()
 // Linux has no HINSTANCE/GetModuleFileName; resolve the running
 // executable's own path via /proc/self/exe (Linux-specific, but this is a
 // Linux-native port, not a portable-to-every-POSIX-OS one).
-void CPath::Module(void * /*hInstance*/)
+void CPath::Module(void * hInstance)
 {
+#ifdef _WIN32
+    wchar_t wbuf[4096];
+    DWORD wlen = GetModuleFileNameW((HMODULE)hInstance, wbuf, 4096);
+    if (wlen == 0 || wlen >= 4096)
+    {
+        m_strPath.clear();
+        return;
+    }
+    char buff_path[16384];
+    int len = WideCharToMultiByte(CP_UTF8, 0, wbuf, (int)wlen, buff_path, sizeof(buff_path) - 1, nullptr, nullptr);
+    buff_path[len > 0 ? len : 0] = '\0';
+    for (char * c = buff_path; *c; c++) { if (*c == '\\') *c = '/'; }
+    m_strPath = buff_path;
+#else
     char buff_path[4096];
     ssize_t len = readlink("/proc/self/exe", buff_path, sizeof(buff_path) - 1);
     if (len <= 0)
@@ -856,6 +898,7 @@ void CPath::Module(void * /*hInstance*/)
     }
     buff_path[len] = '\0';
     m_strPath = buff_path;
+#endif
 }
 
 void CPath::Module()
@@ -1223,7 +1266,7 @@ bool CPath::DirectoryCreate(bool bCreateIntermediates /*= TRUE*/)
     GetDirectory(PathText);
     StripTrailingBackslash(PathText);
     WriteTrace(TracePath, TraceDebug, "Create %s", PathText.c_str());
-    bSuccess = mkdir(PathText.c_str(), S_IRWXU) == 0;
+    bSuccess = MakeDir(PathText.c_str());
     if (!bSuccess)
     {
         WriteTrace(TracePath, TraceWarning, "Failed to create \"%s\" errno: %d", PathText.c_str(), errno);

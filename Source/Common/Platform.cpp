@@ -1,3 +1,4 @@
+#ifndef _WIN32 // POSIX-only shims; the MSVC CRT has these natively
 #include "Platform.h"
 #include <stdarg.h>
 #include <stdint.h>
@@ -42,3 +43,5 @@ int _vscprintf(const char * format, va_list pargs)
     va_end(argcopy);
     return retval;
 }
+
+#endif

@@ -12,6 +12,19 @@
 #include <sys/file.h>
 #include <unistd.h>
 
+#ifdef _WIN32
+#include "Platform.h"
+void pjutil::Sleep(uint32_t timeout)
+{
+    ::Sleep(timeout);
+}
+
+// Vortex64-Windows: single-instance handling is not implemented yet (TODO, tracked in Docs/porting).
+// These report "no other copy running" rather than pretending to detect one.
+int pjutil::ExistingExePid() { return 0; }
+bool pjutil::TerminateExe(int) { return false; }
+void pjutil::RegisterRunningExe() {}
+#else
 void pjutil::Sleep(uint32_t timeout)
 {
     int was_error;
@@ -142,3 +155,5 @@ void pjutil::RegisterRunningExe()
         }
     }
 }
+
+#endif

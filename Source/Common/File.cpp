@@ -5,7 +5,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
+#undef _ASSERTE
 #define _ASSERTE(expr) ((void)0)
 
 CFile::CFile() :
@@ -114,7 +118,7 @@ bool CFile::Open(const char * lpszFileName, uint32_t nOpenFlags)
     }
 
     // Attempt file creation
-    HANDLE hFile = ::CreateFile(stdstr(lpszFileName).ToUTF16().c_str(), dwAccess, dwShareMode, &sa, dwCreateFlag, FILE_ATTRIBUTE_NORMAL, nullptr);
+    HANDLE hFile = ::CreateFileW(stdstr(lpszFileName).ToUTF16().c_str(), dwAccess, dwShareMode, &sa, dwCreateFlag, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (hFile == INVALID_HANDLE_VALUE)
     { //#define ERROR_PATH_NOT_FOUND             3L
         //ULONG err = GetLastError();

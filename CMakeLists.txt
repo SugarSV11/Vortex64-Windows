@@ -22,8 +22,8 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-if(NOT UNIX)
-    message(FATAL_ERROR "This CMakeLists.txt targets Linux only. Use Project64.sln on Windows.")
+if(NOT UNIX AND NOT WIN32)
+    message(FATAL_ERROR "Unsupported platform: Linux and Windows only.")
 endif()
 
 # __FILE__, assertions and debug info must not carry the absolute path of whoever built the binaries
