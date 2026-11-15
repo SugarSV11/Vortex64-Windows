@@ -90,3 +90,11 @@ Ahora dependen de `_WIN32` (`x64ops.h`). El shadow space de 32 bytes ya estaba r
 
 NO verificado todavía: audio (no se ha comprobado que suene), entrada (teclado/mando), juego más allá de la demo,
 rendimiento (Debug, sin medir), save states/SRAM, otros juegos, ni compilación Release.
+
+## Hito 8: audio y teclado verificados con SM64 (Debug, JIT) (2026-11-15)
+- **Audio (SDL2):** el proceso crea una sesión de audio de Windows y su medidor de pico (IAudioMeterInformation) marca 0.83 de máximo,
+  con valor > 0.001 en 60/60 muestras durante 15 s. Confirma que se emite señal; **no** valora calidad, latencia ni sincronización
+  (no se ha escuchado ni medido).
+- **Teclado:** al enviar Enter (Start por defecto, scancode 28) al emulador, SM64 pasa de la pantalla de título a "SELECT FILE"
+  (capturas antes/después). Confirma la ruta de entrada por teclado hasta el juego.
+- **Pendiente:** mando (SDL GameController) sin probar por no haber mando conectado en la prueba; resto de botones/analógico; latencia.
