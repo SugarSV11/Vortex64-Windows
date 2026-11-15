@@ -156,3 +156,15 @@ Tras el arreglo la lista muestra Project64 Video/Audio/Input y RSP con sus DLL.
 
 Sigue sin verificar: cambiar plugin/ajustes y que se apliquen y persistan, escaneo de carpetas de ROMs en la biblioteca (probable que
 fallara por el mismo bug; hay que reprobar), trucos, depurador, scripts JS, pantalla completa, mando, DPI alto.
+
+## Hito 13: biblioteca de juegos verificada (2026-11-15)
+Con una carpeta de ROMs configurada (clave `directories` de `%LOCALAPPDATA%\vortex64\vortex.json`; la copia temporal de la ROM se borró y el fichero
+de configuración del usuario se restauró), la GUI Release:
+- escanea la carpeta y muestra la tarjeta "Super Mario 64 (USA)" con región NTSC-U, 8 MB y formato .z64;
+- al seleccionarla y pulsar "Iniciar" arranca el juego embebido en la ventana (barra de estado: Emulando, VI/s 60.8, JIT).
+Nota: el escaneo no es recursivo por defecto (`RomList_GameDirRecursive` = false), igual que en el original.
+
+Observación sin resolver (impacto bajo): `%APPDATA%\vortex64\Project64.cfg` apareció una vez con una línea suelta `n` tras la sección [Plugin]
+(restos al acortarse el texto de las versiones de plugin Debug -> Release); posible fallo del acortado en `CIniFileBase::fInsertSpaces`/escritura.
+No reproducido en una prueba aislada; pendiente.
+Sin verificar aún: portadas (se ve un marcador de posición), favoritos, filtros/ordenación, vista de lista, zip/7z como ROM.
