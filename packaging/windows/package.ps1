@@ -23,7 +23,7 @@ New-Item -ItemType Directory -Force $stage | Out-Null
 
 # executables and plugins (no .pdb/.ilk/.exp/.lib; no per-user runtime folders)
 Get-ChildItem $bin -File | Where-Object { $_.Extension -in ".exe", ".dll", ".html" } | Copy-Item -Destination $stage
-foreach ($d in "Config", "Lang", "Scripts") {
+foreach ($d in "Config", "Lang", "Scripts", "platforms", "styles", "imageformats") {
     if (Test-Path (Join-Path $bin $d)) { Copy-Item (Join-Path $bin $d) (Join-Path $stage $d) -Recurse }
 }
 
@@ -41,8 +41,9 @@ foreach ($f in "LICENSE", "THIRD_PARTY_NOTICES.md", "README.md") { Copy-Item (Jo
 Copy-Item (Join-Path $root "licenses") (Join-Path $stage "licenses") -Recurse
 @"
 Vortex64-Windows $Version (x64)
-Run from a terminal:   vortex64-cli.exe "path\to\game.z64" [--recompiler|--interpreter]
-This build has no GUI yet (command line only). No ROMs are included; use your own legally obtained ROMs.
+GUI (library, settings, cheats, debugger):   vortex64.exe   (only present if the build had VORTEX_BUILD_GUI=ON)
+Command line:                                vortex64-cli.exe "path\to\game.z64" [--recompiler|--interpreter]
+No ROMs are included; use your own legally obtained ROMs.
 User data (settings, saves, logs) goes to %APPDATA%\vortex64 and %LOCALAPPDATA%\vortex64.
 Source code (GPLv2): https://github.com/SugarSV11/Vortex64-Windows
 "@ | Set-Content (Join-Path $stage "README-WINDOWS.txt") -Encoding UTF8

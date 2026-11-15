@@ -24,6 +24,9 @@
 #include <map>
 #include <string>
 #include "MainMenuID.h"
+#ifdef _WIN32
+#include <windows.h> // Vortex64-Windows: the real Win32 types and VK_* constants
+#else
 typedef uint16_t WORD;
 typedef const wchar_t * LPCTSTR;
 #ifndef TRUE
@@ -43,6 +46,7 @@ typedef const wchar_t * LPCTSTR;
 #define VK_F12 0x7B
 #define VK_OEM_PLUS 0xBB
 #define VK_OEM_MINUS 0xBD
+#endif // !_WIN32
 #include <Vortex64-ui/UserInterface/MenuShortCuts.h>
 
 // Names of <windows.h>/MSVC and of the upstream stdafx (using namespace std) that the
@@ -52,12 +56,13 @@ typedef const wchar_t * LPCTSTR;
 #include <string.h>
 using std::set;
 using std::vector;
+#include <algorithm>
+using std::sort;
+#ifndef _WIN32
 typedef intptr_t INT_PTR;
 typedef uintptr_t UINT_PTR;
 #define _strdup strdup
 #define strtok_s strtok_r
-#include <algorithm>
-using std::sort;
 #define _byteswap_ushort __builtin_bswap16
 #define _byteswap_ulong __builtin_bswap32
 #define _byteswap_uint64 __builtin_bswap64
@@ -66,5 +71,6 @@ using std::sort;
 // Implemented in Debugger/DebugCommon.cpp with a Qt message box (blocks the caller;
 // safe from the emulation thread)
 int MessageBox(void * Parent, const wchar_t * Text, const wchar_t * Caption, unsigned Type);
+#endif // !_WIN32 (Windows uses the real MessageBox)
 
 #include "Debugger/DebuggerUI.h"

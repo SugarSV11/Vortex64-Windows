@@ -43,6 +43,7 @@ void NumberEdit::SetValue(uint32_t Value, bool ZeroExtend)
 #include <QMessageBox>
 #include <QMetaObject>
 
+#ifndef _WIN32 // on Windows the real MessageBox is used
 int MessageBox(void * /*Parent*/, const wchar_t * Text, const wchar_t * Caption, unsigned /*Type*/)
 {
     const QString Message = QString::fromWCharArray(Text), Title = QString::fromWCharArray(Caption);
@@ -63,3 +64,4 @@ int MessageBox(void * /*Parent*/, const wchar_t * Text, const wchar_t * Caption,
     }
     return 0;
 }
+#endif // !_WIN32

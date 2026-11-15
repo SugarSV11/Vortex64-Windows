@@ -14,7 +14,11 @@
 #include <QEventLoop>
 #include <QMetaObject>
 #include <QThread>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <pthread.h>
+#endif
 
 QtNotification::QtNotification(MainWindow * mainWindow) :
     QObject(mainWindow),
@@ -77,7 +81,11 @@ void QtNotification::FatalError(const char * Message) const
                                InGuiThread ? Qt::DirectConnection : Qt::BlockingQueuedConnection);
     if (!InGuiThread)
     {
+#ifdef _WIN32
+        ExitThread(0);
+#else
         pthread_exit(nullptr);
+#endif
     }
 }
 

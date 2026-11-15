@@ -54,7 +54,16 @@ private:
     bool m_FullSpeed;
 };
 
-extern CSettings * g_settings;
+#ifndef PJ64_PLUGIN_DATA
+#if defined(_WIN32) && defined(PJ64_QTCONFIG_MODULE)
+#define PJ64_PLUGIN_DATA __declspec(dllimport)
+#elif defined(_WIN32)
+#define PJ64_PLUGIN_DATA __declspec(dllexport)
+#else
+#define PJ64_PLUGIN_DATA
+#endif
+#endif
+extern PJ64_PLUGIN_DATA CSettings * g_settings;
 
 void SetupAudioSettings(void);
 void CleanupAudioSettings(void);

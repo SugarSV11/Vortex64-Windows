@@ -1891,7 +1891,12 @@ void ControllerPage::RemoveMapping(const BUTTON & Button)
 }
 } // namespace
 
-extern "C" __attribute__((visibility("default"))) void PJ64InputQtConfig(void * /*hParent*/)
+#ifdef _WIN32
+#define PJ64_QT_EXPORT __declspec(dllexport)
+#else
+#define PJ64_QT_EXPORT __attribute__((visibility("default")))
+#endif
+extern "C" PJ64_QT_EXPORT void PJ64InputQtConfig(void * /*hParent*/)
 {
     int Argc = 0;
     QApplication * Owned = nullptr;

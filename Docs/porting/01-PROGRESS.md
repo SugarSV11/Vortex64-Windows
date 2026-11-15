@@ -122,3 +122,22 @@ probar escenas de juego. Pendiente: optimización, perfilado, otros juegos.
   **NO ejecutado:** el repositorio remoto no existe aún, así que el workflow no se ha probado en GitHub.
 - Los workflows Linux heredados quedan solo manuales (`workflow_dispatch`).
 - `vcpkg.json` no fija `builtin-baseline`: las versiones de dependencias no son reproducibles todavía.
+
+## Hito 11: GUI Qt6 (`vortex64.exe`) corre en Windows (2026-11-15)
+Qt 6.11.3 (vcpkg, feature `gui`: qtbase widgets/gui). Build: `cmake --preset windows-msvc-release -DVORTEX_BUILD_GUI=ON -DVCPKG_MANIFEST_FEATURES=gui`.
+Verificado con capturas:
+- Sin argumentos: biblioteca de juegos (Biblioteca/Recientes/Favoritos/64DD, Ajustes, Debugger, Acerca de, búsqueda, vistas).
+- Con la ROM: menús (Archivo, Emulación, Ver, Configuración, Herramientas, Ayuda), barra de estado "Emulando ... VI/s: 60.30 · JIT"
+  y el **vídeo embebido en la ventana de Qt** (HWND del widget nativo -> `SDL_CreateWindowFrom`), sin ventana SDL aparte.
+- El ZIP portable (27.8 MB) con GUI + plugins de Qt (platforms/styles/imageformats) arranca desde una carpeta limpia y carga la ROM.
+
+Cambios: `main.cpp`/`MainWindow.cpp` sin X11 (HWND, `SetWindowPos` para "siempre encima"), `ScreenSaverInhibit_win.cpp`
+(`SetThreadExecutionState`), `stdafx.h` con `windows.h` real, `Common/Windows/compat/vortex_msvc_compat.h` (forced include MSVC),
+exportación de datos entre plugins y módulos Qt de configuración (`PJ64_PLUGIN_DATA`, `WINDOWS_EXPORT_ALL_SYMBOLS`),
+discord-rpc con sus ficheros Windows, motor JS del depurador con `ScriptShimWin` (hooks de PostMessage/MessageBox).
+
+NO verificado todavía: ventanas de Ajustes y de configuración de plugins (Qt) abiertas en uso real; trucos; depurador y scripts JS
+(compilan, sin probar); Discord RPC; inhibidor de suspensión; fullscreen; DPI alto; Debug build de la GUI (plugins debug de Qt);
+los tests de la GUI de Linux (X11/XTest) no se construyen en Windows. Avisos de Qt en stderr: "QImage::scaled: Image is a null image"
+(posible icono/imagen que no carga: pendiente de investigar). `ScriptShimTerminateProcesses` es un stub (los procesos de `exec()` no se
+terminan al cerrar). Instancia única sigue sin implementar en Windows.

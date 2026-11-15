@@ -4,6 +4,11 @@
 // Copyright(C) 2003-2009 Sergey 'Gonetz' Lipski
 // Copyright(C) 2002 Dave2001
 // GNU/GPLv2 licensed: https://gnu.org/licenses/gpl-2.0.html
+#ifdef _WIN32
+#define PJ64_QTCONFIG_NAME(n) "Vortex64-" n "-qtconfig.dll"
+#else
+#define PJ64_QTCONFIG_NAME(n) "libVortex64-" n "-qtconfig.so"
+#endif
 #include "Gfx_1.3.h"
 #include <dlfcn.h>
 #include <string>
@@ -49,7 +54,7 @@ void CALL DllConfig(void * hParent)
     }
     std::string ModulePath(Info.dli_fname);
     size_t Slash = ModulePath.rfind('/');
-    ModulePath = (Slash == std::string::npos ? std::string() : ModulePath.substr(0, Slash + 1)) + "libVortex64-video-qtconfig.so";
+    ModulePath = (Slash == std::string::npos ? std::string() : ModulePath.substr(0, Slash + 1)) + PJ64_QTCONFIG_NAME("video");
     void * Module = dlopen(ModulePath.c_str(), RTLD_NOW | RTLD_LOCAL);
     if (Module == nullptr)
     {

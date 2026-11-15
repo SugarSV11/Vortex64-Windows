@@ -30,7 +30,7 @@ jobs:
           key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
 
       - name: Configure (Release)
-        run: cmake --preset windows-msvc-release
+        run: cmake --preset windows-msvc-release -DVORTEX_BUILD_GUI=ON -DVCPKG_MANIFEST_FEATURES=gui
 
       - name: Build (Release)
         run: cmake --build --preset windows-msvc-release

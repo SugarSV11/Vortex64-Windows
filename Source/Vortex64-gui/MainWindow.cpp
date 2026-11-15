@@ -70,7 +70,11 @@
 #include <QWindow>
 #include <QtGui/qguiapplication_platform.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <X11/Xlib.h>
+#endif
 
 namespace
 {
@@ -319,7 +323,12 @@ void * MainWindow::GetVideoWindowHandle() const
                                   Qt::BlockingQueuedConnection);
         return handle;
     }
+#ifdef _WIN32
+    // Vortex64-Windows: winId() is the HWND of the native child widget; SDL_CreateWindowFrom() accepts it
+    if (QGuiApplication::platformName() != QStringLiteral("windows") || m_VideoWidget == nullptr)
+#else
     if (QGuiApplication::platformName() != QStringLiteral("xcb") || m_VideoWidget == nullptr)
+#endif
     {
         return nullptr;
     }
@@ -358,6 +367,7 @@ void * MainWindow::GetVideoWindowHandle() const
     {
         return nullptr;
     }
+#ifndef _WIN32
     if (auto * x11App = qGuiApp->nativeInterface<QNativeInterface::QX11Application>())
     {
         Display * display = x11App->display();
@@ -366,6 +376,7 @@ void * MainWindow::GetVideoWindowHandle() const
             XSync(display, False);
         }
     }
+#endif
     return reinterpret_cast<void *>(id);
 }
 
@@ -594,6 +605,10 @@ void MainWindow::ReloadRomBrowserColumns()
 // plugin is embedded in).
 void MainWindow::MakeWindowOnTop(bool OnTop)
 {
+#ifdef _WIN32
+    SetWindowPos((HWND)winId(), OnTop ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    return;
+#else
     Display * Dpy = nullptr;
     if (auto * x11App = qGuiApp->nativeInterface<QNativeInterface::QX11Application>())
     {
@@ -613,6 +628,7 @@ void MainWindow::MakeWindowOnTop(bool OnTop)
     Event.xclient.data.l[3] = 1;
     XSendEvent(Dpy, DefaultRootWindow(Dpy), False, SubstructureRedirectMask | SubstructureNotifyMask, &Event);
     XFlush(Dpy);
+#endif
 }
 
 void MainWindow::OnSettings()

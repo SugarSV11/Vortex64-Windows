@@ -48,7 +48,16 @@ extern unsigned int BMASK;
 extern uint32_t update_screen_count;
 
 extern int GfxInitDone;
-extern bool g_romopen;
+#ifndef PJ64_PLUGIN_DATA
+#if defined(_WIN32) && defined(PJ64_QTCONFIG_MODULE)
+#define PJ64_PLUGIN_DATA __declspec(dllimport)
+#elif defined(_WIN32)
+#define PJ64_PLUGIN_DATA __declspec(dllexport)
+#else
+#define PJ64_PLUGIN_DATA
+#endif
+#endif
+extern PJ64_PLUGIN_DATA bool g_romopen;
 extern int to_fullscreen;
 
 extern int ev_fullscreen;

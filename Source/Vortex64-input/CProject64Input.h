@@ -82,4 +82,13 @@ private:
     bool m_MouseLock;
 };
 
-extern CProject64Input * g_InputPlugin;
+#ifndef PJ64_PLUGIN_DATA
+#if defined(_WIN32) && defined(PJ64_QTCONFIG_MODULE)
+#define PJ64_PLUGIN_DATA __declspec(dllimport)
+#elif defined(_WIN32)
+#define PJ64_PLUGIN_DATA __declspec(dllexport)
+#else
+#define PJ64_PLUGIN_DATA
+#endif
+#endif
+extern PJ64_PLUGIN_DATA CProject64Input * g_InputPlugin;

@@ -15,6 +15,11 @@ project(Vortex64 CXX C)
 # ---------------------------------------------------------------------------
 
 set(CMAKE_CXX_STANDARD 17)
+
+if(MSVC)
+    # GCC/POSIX compatibility names (bswap builtins, strtok_r, unqualified max/min) for the shared sources
+    add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/FI${CMAKE_SOURCE_DIR}/Source/Common/Windows/compat/vortex_msvc_compat.h>")
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -40,9 +45,7 @@ add_subdirectory(Source/3rdParty/asmjit)
 add_subdirectory(Source/3rdParty/softfloat-3e)
 add_subdirectory(Source/3rdParty/7zip-decoder)
 add_subdirectory(Source/3rdParty/zlib)
-if(NOT WIN32)
-    add_subdirectory(Source/3rdParty/discord-rpc) # TODO(Windows): needs connection_win.cpp
-endif()
+add_subdirectory(Source/3rdParty/discord-rpc)
 add_subdirectory(Source/3rdParty/zlib/contrib/minizip)
 add_subdirectory(Source/Common)
 add_subdirectory(Source/Vortex64-rsp-core)

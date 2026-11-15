@@ -5,14 +5,14 @@
 - CMake >= 3.16, Ninja
 - vcpkg (`git clone https://github.com/microsoft/vcpkg` + `bootstrap-vcpkg.bat`) y la variable `VCPKG_ROOT`
 
-## Compilar (CLI + plugins)
+## Compilar (GUI Qt6 + CLI + plugins)
 Desde "x64 Native Tools Command Prompt" (o tras `vcvars64.bat`):
 
     set VCPKG_ROOT=C:\ruta\a\vcpkg
-    cmake --preset windows-msvc-release
+    cmake --preset windows-msvc-release -DVORTEX_BUILD_GUI=ON -DVCPKG_MANIFEST_FEATURES=gui
     cmake --build --preset windows-msvc-release
 
-Las dependencias (SDL2, libpng, zlib) las instala vcpkg automáticamente desde `vcpkg.json`.
+Las dependencias (SDL2, libpng, zlib y, con la feature `gui`, Qt6 base; la primera vez Qt tarda ~25 min) las instala vcpkg automáticamente desde `vcpkg.json`.
 Salida: `build/windows-msvc-release/bin/` (`vortex64-cli.exe` + `Vortex64-{rsp,video,audio,input}.dll`).
 
 ## Ejecutar
@@ -28,5 +28,4 @@ Genera `dist/Vortex64-Windows-<version>-x64.zip` (+ `.sha256`) con las DLL de SD
     ctest --test-dir build/windows-msvc-release --output-on-failure
 
 ## Estado
-Ver `Docs/porting/01-PROGRESS.md` (qué está verificado y qué no). La GUI Qt6 aún no está portada
-(`-DVORTEX_BUILD_GUI=ON` y `vcpkg install --feature gui` no se han probado).
+Ver `Docs/porting/01-PROGRESS.md` (qué está verificado y qué no). La GUI Qt6 corre en Windows (ver Hito 11).

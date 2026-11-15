@@ -80,7 +80,7 @@ public:
     CPath GetSymFilePath();
     void Load();
     void Save();
-    void ParseErrorAlert(char * message, int lineNumber);
+    void ParseErrorAlert(const char * message, int lineNumber);
 
     void AddSymbol(int type, uint32_t address, const char * name, const char * description = nullptr, bool bSortAfter = true);
     void Reset();

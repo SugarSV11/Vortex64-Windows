@@ -17,7 +17,8 @@ static CN64Image * GetThisImage(duk_context * ctx)
     if (image == nullptr)
     {
         duk_push_error_object(ctx, DUK_ERR_ERROR, "internal image object is null");
-        return duk_throw(ctx);
+        duk_throw(ctx);
+        return nullptr; // (not reached: duk_throw does not return)
     }
 
     return image;

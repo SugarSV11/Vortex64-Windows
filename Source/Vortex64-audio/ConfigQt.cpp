@@ -24,7 +24,7 @@
 #include <QVBoxLayout>
 #include <vector>
 
-extern bool g_romopen;
+extern PJ64_PLUGIN_DATA bool g_romopen;
 
 namespace
 {
@@ -197,7 +197,12 @@ private:
 };
 } // namespace
 
-extern "C" __attribute__((visibility("default"))) void PJ64AudioQtConfig(void * hParent)
+#ifdef _WIN32
+#define PJ64_QT_EXPORT __declspec(dllexport)
+#else
+#define PJ64_QT_EXPORT __attribute__((visibility("default")))
+#endif
+extern "C" PJ64_QT_EXPORT void PJ64AudioQtConfig(void * hParent)
 {
     (void)hParent;
     if (QApplication::instance() == nullptr)

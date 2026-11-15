@@ -8,8 +8,14 @@ project(Vortex64-gui CXX)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets Test DBus)
-find_package(X11 REQUIRED)
+if(WIN32)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+    set(VORTEX_SCREENSAVER_SRC ScreenSaverInhibit_win.cpp ScreenSaverInhibit.h) # .h: AUTOMOC (Q_OBJECT)
+else()
+    find_package(Qt6 REQUIRED COMPONENTS Widgets Test DBus)
+    find_package(X11 REQUIRED)
+    set(VORTEX_SCREENSAVER_SRC ScreenSaverInhibit.cpp)
+endif()
 
 # The Vortex64 frontend: theme, icons, store, library model and views, shell
 # (what the settings window needs)
@@ -42,7 +48,7 @@ add_executable(vortex64
     Settings/ShortCutsPage.cpp
     Dialogs/AboutDialog.cpp
     Dialogs/LogOptionsDialog.cpp
-    ScreenSaverInhibit.cpp
+    ${VORTEX_SCREENSAVER_SRC}
     PresentSync.cpp
     Dialogs/FirstRun.cpp
     Dialogs/CheatDialog.cpp
@@ -83,19 +89,32 @@ target_link_libraries(vortex64 PRIVATE
     Common
     Vortex64-core
     Qt6::Widgets
-    Qt6::DBus
-    X11::X11
     vendored_png
     discord_rpc
 )
+if(NOT WIN32)
+    target_link_libraries(vortex64 PRIVATE Qt6::DBus X11::X11)
+endif()
 
 add_dependencies(vortex64 Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input)
+if(WIN32)
+    # Qt runtime: the platform/style/image-format plugins next to the executable (the Qt DLLs themselves
+    # are copied by the vcpkg toolchain). Debug builds use the debug plugin directory.
+    set(VORTEX_QT_PLUGIN_ROOT "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+    add_custom_command(TARGET vortex64 POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "$<IF:$<CONFIG:Debug>,${VORTEX_QT_PLUGIN_ROOT}/debug/Qt6/plugins,${VORTEX_QT_PLUGIN_ROOT}/Qt6/plugins>"
+            "$<TARGET_FILE_DIR:vortex64>"
+        COMMENT "Copying Qt plugins next to vortex64.exe")
+endif()
 # The product is Vortex64: its executable is vortex64
 set_target_properties(vortex64 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     OUTPUT_NAME vortex64
 )
 
+# The Linux test executables (X11/XTest/DBus, offscreen XDG harness) are not built on Windows yet.
+if(NOT WIN32)
 # Regression test for the Settings pages (offscreen Qt, isolated XDG dirs).
 # Run: ctest -R gui-settings   (or execute the two "settings-test" steps by hand)
 add_executable(settings-test EXCLUDE_FROM_ALL
@@ -650,6 +669,8 @@ set_target_properties(plugins-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUI
 target_link_libraries(plugins-test PRIVATE Common Vortex64-core)
 add_dependencies(plugins-test Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input)
 
+endif() # NOT WIN32 (tests)
+
 # Debugger back end of upstream (Project64/UserInterface/Debugger), compiled unchanged: the
 # breakpoints, symbol table, debug MMU access, memory scanner, assembler and the CPU/DMA logs
 add_library(Vortex64-debugger-backend OBJECT
@@ -665,6 +686,9 @@ target_include_directories(Vortex64-debugger-backend PRIVATE ${CMAKE_CURRENT_SOU
 set_target_properties(Vortex64-debugger-backend PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 target_link_libraries(Vortex64-debugger-backend PRIVATE Common Vortex64-core Qt6::Widgets)
 target_compile_definitions(Vortex64-debugger-backend PRIVATE QT_NO_KEYWORDS)
+if(MSVC)
+    target_compile_options(Vortex64-debugger-backend PRIVATE /permissive /Zc:strictStrings-)
+endif()
 
 # The Qt debugger windows and CDebuggerUI (shared by the GUI and the tests)
 add_library(Vortex64-debugger-ui OBJECT
@@ -704,10 +728,17 @@ target_compile_definitions(vendored_png PRIVATE PNG_SKIP_SETJMP_CHECK)
 target_link_libraries(vendored_png PUBLIC vendored_zlib)
 set_target_properties(vendored_png PROPERTIES POSITION_INDEPENDENT_CODE ON)
 # hidden: an exported png_* of libpng 1.4.7 would replace the libpng 1.6 that Qt loads
-target_compile_options(vendored_png PRIVATE -w -fvisibility=hidden)
+if(NOT MSVC)
+    target_compile_options(vendored_png PRIVATE -w -fvisibility=hidden)
+endif()
 
 set(DEBUGGER_SCRIPT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../Vortex64-ui/UserInterface/Debugger)
 file(GLOB DEBUGGER_SCRIPTAPI_SOURCES ${DEBUGGER_SCRIPT_DIR}/ScriptAPI/*.cpp)
+if(WIN32)
+    set(DEBUGGER_SHIM_SRC Debugger/ScriptShimWin/ScriptShimWin.cpp)
+else()
+    set(DEBUGGER_SHIM_SRC Debugger/ScriptShim/ScriptShim.cpp)
+endif()
 add_library(Vortex64-debugger-scripts OBJECT
     ${DEBUGGER_SCRIPT_DIR}/ScriptSystem.cpp
     ${DEBUGGER_SCRIPT_DIR}/ScriptInstance.cpp
@@ -715,17 +746,33 @@ add_library(Vortex64-debugger-scripts OBJECT
     ${DEBUGGER_SCRIPTAPI_SOURCES}
     ../3rdParty/duktape/duktape.cpp
     ../3rdParty/duktape/duk_module_duktape.cpp
-    Debugger/ScriptShim/ScriptShim.cpp
+    ${DEBUGGER_SHIM_SRC}
     Debugger/ScriptGlue.cpp
 )
-target_include_directories(Vortex64-debugger-scripts BEFORE PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Debugger/ScriptShim)
+# The fake <windows.h> of ScriptShim/ would shadow the real one: only used off Windows
+if(NOT WIN32)
+    target_include_directories(Vortex64-debugger-scripts BEFORE PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Debugger/ScriptShim)
+else()
+    target_compile_options(Vortex64-debugger-scripts PRIVATE /FI${CMAKE_CURRENT_SOURCE_DIR}/Debugger/ScriptShimWin/script_win_hooks.h)
+endif()
 target_include_directories(Vortex64-debugger-scripts PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/../3rdParty ${DEBUGGER_SCRIPT_DIR} ${DEBUGGER_SCRIPT_DIR}/ScriptAPI)
+if(WIN32)
+    # LAST: only the shim headers that have no real counterpart (WM_JSAPI_ACTION, Debugger.h, ...)
+    target_include_directories(Vortex64-debugger-scripts PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Debugger/ScriptShimWin)
+endif()
 set_target_properties(Vortex64-debugger-scripts PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 target_link_libraries(Vortex64-debugger-scripts PRIVATE Common Vortex64-core Qt6::Widgets vendored_png)
 target_compile_definitions(Vortex64-debugger-scripts PRIVATE PNG_SKIP_SETJMP_CHECK)
 # MSVC accepts `return duk_throw(ctx)` in functions returning pointers; GCC needs -fpermissive for that
-set_source_files_properties(${DEBUGGER_SCRIPT_DIR}/ScriptAPI/JSSocketWorker.cpp ${DEBUGGER_SCRIPT_DIR}/ScriptAPI/ScriptAPI_Socket.cpp ${DEBUGGER_SCRIPT_DIR}/ScriptAPI/ScriptAPI_N64Image.cpp PROPERTIES COMPILE_OPTIONS -fpermissive)
+if(NOT MSVC)
+    set_source_files_properties(${DEBUGGER_SCRIPT_DIR}/ScriptAPI/JSSocketWorker.cpp ${DEBUGGER_SCRIPT_DIR}/ScriptAPI/ScriptAPI_Socket.cpp ${DEBUGGER_SCRIPT_DIR}/ScriptAPI/ScriptAPI_N64Image.cpp PROPERTIES COMPILE_OPTIONS -fpermissive)
+endif()
 target_compile_definitions(Vortex64-debugger-scripts PRIVATE QT_NO_KEYWORDS)
+if(MSVC)
+    # upstream code that MSVC accepts without /permissive- (e.g. `return duk_throw(ctx)` in pointer-returning functions)
+    target_compile_options(Vortex64-debugger-scripts PRIVATE /permissive /Zc:strictStrings-)
+    target_link_libraries(Vortex64-debugger-scripts PRIVATE shlwapi ws2_32)
+endif()
 
 # The icons of Vortex64 (packaging/linux/icons): the drawing of the application, written as SVG and PNG
 add_executable(vortex64-icongen EXCLUDE_FROM_ALL Vortex/tools/icongen.cpp)

@@ -6,12 +6,24 @@
 // Common/DynamicLibrary), everything else in this file is unchanged.
 #include <Common/DynamicLibrary.h>
 #include <string.h>
+#ifdef _WIN32
+// Vortex64-Windows: windows.h (via stdafx.h) already declares HMODULE/LPCSTR; use Common/DynamicLibrary (UTF-8 paths)
+#define PLUGIN_FILE_MASK "*.dll"
+#undef LoadLibrary
+#undef GetProcAddress
+#undef FreeLibrary
+#define HMODULE DynLibHandle
+#define LoadLibrary(Name) DynamicLibraryOpen(Name, false)
+#define GetProcAddress(Lib, Name) DynamicLibraryGetProc(Lib, Name)
+#define FreeLibrary(Lib) DynamicLibraryClose(Lib)
+#else
 #define PLUGIN_FILE_MASK "*.so"
 typedef DynLibHandle HMODULE;
 typedef const char * LPCSTR;
 #define LoadLibrary(Name) DynamicLibraryOpen(Name, false)
 #define GetProcAddress(Lib, Name) DynamicLibraryGetProc(Lib, Name)
 #define FreeLibrary(Lib) DynamicLibraryClose(Lib)
+#endif
 #ifndef PLUGIN_FILE_MASK
 #define PLUGIN_FILE_MASK "*.dll"
 #endif

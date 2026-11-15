@@ -24,7 +24,11 @@
 #include <QIcon>
 #include <QTimer>
 
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <X11/Xlib.h>
+#endif
 
 #include <csignal>
 #include <cstdlib>
@@ -55,8 +59,10 @@ int main(int argc, char ** argv)
     // winId() isn't an X11 XID at all. setenv()'s overwrite=0 leaves an
     // explicit caller override (e.g. QT_QPA_PLATFORM=wayland to test that
     // path deliberately) intact.
+#ifndef _WIN32
     setenv("QT_QPA_PLATFORM", "xcb", 0);
     setenv("SDL_VIDEODRIVER", "x11", 0);
+#endif
 
     // Qt's xcb platform plugin and the video plugin's SDL2 x11 backend
     // (Vortex64-video/Renderer/OGLglitchmain.cpp, forced via
@@ -74,7 +80,9 @@ int main(int argc, char ** argv)
     // anyway as the textbook-correct thing to do here, not because it
     // fixed that specific bug.) Must run before QApplication's own
     // constructor, which is the first thing in this process to touch Xlib.
+#ifndef _WIN32
     XInitThreads();
+#endif
 
     QApplication app(argc, argv);
     QApplication::setApplicationName("Vortex64");

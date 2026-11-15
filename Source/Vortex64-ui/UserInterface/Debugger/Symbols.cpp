@@ -386,7 +386,7 @@ void CSymbolTable::GetValueString(char * dst, CSymbol * symbol)
     }
 }
 
-void CSymbolTable::ParseErrorAlert(char * message, int lineNumber)
+void CSymbolTable::ParseErrorAlert(const char * message, int lineNumber)
 {
     stdstr messageFormatted = stdstr_f("%s\nLine %d", message, lineNumber);
     MessageBox(nullptr, messageFormatted.ToUTF16().c_str(), L"Symbol parse error", MB_OK | MB_ICONWARNING);
