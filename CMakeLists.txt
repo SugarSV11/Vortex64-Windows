@@ -17,6 +17,9 @@ project(Vortex64 CXX C)
 set(CMAKE_CXX_STANDARD 17)
 
 if(MSVC)
+    # debug symbols in every configuration (Release too): crash stacks and the sampling profiler (vortex64-cli --profile) need the .pdb files
+    add_compile_options(/Zi)
+    add_link_options(/DEBUG /OPT:REF /OPT:ICF)
     # GCC/POSIX compatibility names (bswap builtins, strtok_r, unqualified max/min) for the shared sources
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/FI${CMAKE_SOURCE_DIR}/Source/Common/Windows/compat/vortex_msvc_compat.h>")
 endif()

@@ -206,3 +206,22 @@ y escenas pesadas antes de optimizar.
 
 Aclaración sobre la línea `n` del `Project64.cfg`: no se reproduce acortando varias claves seguidas en una prueba aislada (290 bytes correctos);
 lo más probable es que apareciera porque yo terminaba el proceso de la GUI con `Stop-Process -Force` mientras escribía el fichero (la escritura del INI no es atómica). Sin confirmar.
+
+## Hito 16: perfilado (2026-11-15)
+Nuevo en la CLI: `--profile=N` (muestreador propio: suspende cada hilo ~1000 veces/s, anota RIP y recorre la pila del hilo más ocupado; símbolos
+por .pdb, que ahora se generan también en Release) y `--perf` (velocidad emulada/real con el registro Count). SM64 (USA), Release, RX 9060 XT.
+
+Hallazgo: con `--unlimited` pero vsync del plugin de vídeo activo (por defecto, intervalo de intercambio -1 = adaptativo), el hilo de emulación pasaba
+**~48 % del tiempo esperando** en `Vortex64-video!gfxBufferSwap` (driver OpenGL de AMD, `atio6axx`), limitado por el refresco del monitor (100 Hz).
+Con `[Video] vsync=0` (perfil de usuario aislado) ese tiempo de espera desaparece (0.8 %) y el hilo queda 99 % en cómputo.
+
+| Modo (sin limitador, vsync desactivado) | mín | media | máx |
+|---|---|---|---|
+| JIT | 7.43x | 9.42x | 12.33x |
+| Intérprete | 4.76x | 5.77x | 7.58x |
+(35 muestras de 1 s; 1x = 60 VI/s; JIT = 1.63x el intérprete.) Con vsync activo: JIT media 4.13x (aisl.) / 2.47x (perfil del usuario con "Display Frame Rate").
+
+Perfil del hilo de emulación con el JIT (99 % cómputo): código generado 19 %, `CRecompiler::RecompilerMain_Lookup_validate` 19 % (búsqueda/validación de bloques),
+`R4300iOp::ExecuteFallbackOpcode` 6.6 % + operaciones FPU en intérprete (LWC1/COP1, softfloat), `LW_Memory`/`VAddrToPAddr` ~5 %, HLE de audio del RSP ~3 %.
+Candidatos de optimización (NO aplicados; a velocidad normal ya sobra margen, 9x): reducir el coste de la búsqueda de bloques, recompilar más operaciones FPU
+sin perder precisión. Limitaciones: una sola escena (título/demo) de un juego; sin comparar con otros emuladores.
