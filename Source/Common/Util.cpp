@@ -19,11 +19,108 @@ void pjutil::Sleep(uint32_t timeout)
     ::Sleep(timeout);
 }
 
-// Vortex64-Windows: single-instance handling is not implemented yet (TODO, tracked in Docs/porting).
-// These report "no other copy running" rather than pretending to detect one.
-int pjutil::ExistingExePid() { return 0; }
-bool pjutil::TerminateExe(int) { return false; }
-void pjutil::RegisterRunningExe() {}
+// Vortex64-Windows single-instance handling: the running copy keeps a named file mapping (alive only as long as the
+// process is) that holds its process id. No stale files: when the process dies the mapping disappears with it.
+static const wchar_t * const kInstanceMapping = L"Local\\Vortex64-Windows-instance-pid";
+static HANDLE g_InstanceMapping = nullptr;
+
+static std::wstring ExePathOfProcess(HANDLE Process)
+{
+    wchar_t Buffer[4096];
+    DWORD Size = 4096;
+    return QueryFullProcessImageNameW(Process, 0, Buffer, &Size) ? std::wstring(Buffer, Size) : std::wstring();
+}
+
+int pjutil::ExistingExePid()
+{
+    HANDLE Map = OpenFileMappingW(FILE_MAP_READ, FALSE, kInstanceMapping);
+    if (Map == nullptr)
+    {
+        return 0;
+    }
+    DWORD Pid = 0;
+    if (const DWORD * View = (const DWORD *)MapViewOfFile(Map, FILE_MAP_READ, 0, 0, sizeof(DWORD)))
+    {
+        Pid = *View;
+        UnmapViewOfFile(View);
+    }
+    CloseHandle(Map);
+    if (Pid == 0 || Pid == GetCurrentProcessId())
+    {
+        return 0;
+    }
+    // only another copy of this executable (a recycled process id is not one)
+    HANDLE Other = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, Pid);
+    if (Other == nullptr)
+    {
+        return 0;
+    }
+    HANDLE Self = GetCurrentProcess();
+    const bool Same = _wcsicmp(ExePathOfProcess(Other).c_str(), ExePathOfProcess(Self).c_str()) == 0;
+    CloseHandle(Other);
+    return Same ? (int)Pid : 0;
+}
+
+struct CloseRequest
+{
+    DWORD Pid;
+    int Posted;
+};
+
+static BOOL CALLBACK CloseWindowsOfProcess(HWND Window, LPARAM Param)
+{
+    CloseRequest * Request = (CloseRequest *)Param;
+    DWORD WindowPid = 0;
+    GetWindowThreadProcessId(Window, &WindowPid);
+    if (WindowPid == Request->Pid && IsWindowVisible(Window))
+    {
+        PostMessageW(Window, WM_CLOSE, 0, 0);
+        Request->Posted++;
+    }
+    return TRUE;
+}
+
+bool pjutil::TerminateExe(int Pid)
+{
+    if (Pid <= 0)
+    {
+        return false;
+    }
+    HANDLE Process = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, FALSE, (DWORD)Pid);
+    if (Process == nullptr)
+    {
+        return false;
+    }
+    // the application ends its game and saves its settings when its windows are closed: ask first, then force
+    CloseRequest Request = {(DWORD)Pid, 0};
+    EnumWindows(CloseWindowsOfProcess, (LPARAM)&Request);
+    bool Ended = Request.Posted > 0 && WaitForSingleObject(Process, 10000) == WAIT_OBJECT_0;
+    if (!Ended)
+    {
+        TerminateProcess(Process, 1);
+        Ended = WaitForSingleObject(Process, 5000) == WAIT_OBJECT_0;
+    }
+    CloseHandle(Process);
+    return Ended;
+}
+
+void pjutil::RegisterRunningExe()
+{
+    if (g_InstanceMapping != nullptr)
+    {
+        return;
+    }
+    g_InstanceMapping = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, sizeof(DWORD), kInstanceMapping);
+    if (g_InstanceMapping == nullptr)
+    {
+        return;
+    }
+    if (DWORD * View = (DWORD *)MapViewOfFile(g_InstanceMapping, FILE_MAP_WRITE, 0, 0, sizeof(DWORD)))
+    {
+        *View = GetCurrentProcessId();
+        UnmapViewOfFile(View);
+    }
+}
 #else
 void pjutil::Sleep(uint32_t timeout)
 {

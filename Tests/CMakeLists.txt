@@ -16,6 +16,11 @@ set_target_properties(rsp-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED 
 target_link_libraries(rsp-test PRIVATE Common)
 add_dependencies(rsp-test Vortex64-rsp)
 
+add_executable(instance-test instance_test.cpp)
+target_include_directories(instance-test PRIVATE ${CMAKE_SOURCE_DIR}/Source)
+set_target_properties(instance-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+target_link_libraries(instance-test PRIVATE Common)
+
 add_executable(make-fake-rom make_fake_rom.cpp)
 set_target_properties(make-fake-rom PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
@@ -26,6 +31,7 @@ add_custom_target(fake-test-rom DEPENDS ${FAKE_ROM})
 add_test(NAME common COMMAND common-test)
 add_test(NAME core COMMAND core-test)
 add_test(NAME rsp COMMAND rsp-test)
+add_test(NAME instance COMMAND instance-test)
 add_test(NAME cli-boot-interpreter COMMAND ${CMAKE_COMMAND} -DCLI=$<TARGET_FILE:vortex64-cli> -DROM=${FAKE_ROM} -DMODE=--interpreter -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_boot.cmake)
 add_test(NAME cli-boot-recompiler COMMAND ${CMAKE_COMMAND} -DCLI=$<TARGET_FILE:vortex64-cli> -DROM=${FAKE_ROM} -DMODE=--recompiler -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_boot.cmake)
 if(TARGET jit-fuzz-test)
@@ -39,7 +45,7 @@ if(TARGET jit-fuzz-test)
     add_test(NAME jit-fuzz-directed COMMAND jit-fuzz-test ${FAKE_ROM} 1 1 directed)
     set_tests_properties(jit-fuzz-directed PROPERTIES TIMEOUT 900 LABELS slow)
 endif()
-set_tests_properties(common core rsp cli-boot-interpreter cli-boot-recompiler PROPERTIES TIMEOUT 120)
+set_tests_properties(common core rsp instance cli-boot-interpreter cli-boot-recompiler PROPERTIES TIMEOUT 120)
 # user data of every test run is isolated from the real user profile
 get_property(ALL_TESTS DIRECTORY PROPERTY TESTS)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/test-appdata ${CMAKE_BINARY_DIR}/test-localappdata)

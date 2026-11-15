@@ -225,3 +225,10 @@ Perfil del hilo de emulación con el JIT (99 % cómputo): código generado 19 %,
 `R4300iOp::ExecuteFallbackOpcode` 6.6 % + operaciones FPU en intérprete (LWC1/COP1, softfloat), `LW_Memory`/`VAddrToPAddr` ~5 %, HLE de audio del RSP ~3 %.
 Candidatos de optimización (NO aplicados; a velocidad normal ya sobra margen, 9x): reducir el coste de la búsqueda de bloques, recompilar más operaciones FPU
 sin perder precisión. Limitaciones: una sola escena (título/demo) de un juego; sin comparar con otros emuladores.
+
+## Hito 17: cierre de paridad (2026-11-15)
+Ver `Docs/porting/02-PARITY.md` (tabla completa con lo verificado y lo no verificado).
+Nuevo: instancia única real en Windows (archivo mapeado con nombre; `Tests/instance_test.cpp` con procesos reales: PASS);
+verificados save states (F5/F7), ROM en .zip, diálogo de Trucos, depurador (al activarlo) y menús.
+GLideN64 NO portado (alcance de varias horas; el plugin de vídeo propio funciona y es el predeterminado).
+ctest: common, core, rsp, instance, 2x cli-boot, 4x jit-fuzz = 10/10, más `jit-fuzz-directed` (PASS, 2 min 48 s).
