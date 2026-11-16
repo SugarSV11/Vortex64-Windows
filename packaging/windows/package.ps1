@@ -22,7 +22,7 @@ if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 New-Item -ItemType Directory -Force $stage | Out-Null
 
 # executables and plugins (no .pdb/.ilk/.exp/.lib; no per-user runtime folders)
-Get-ChildItem $bin -File | Where-Object { $_.Extension -in ".exe", ".dll", ".html" } | Copy-Item -Destination $stage
+Get-ChildItem $bin -File | Where-Object { $_.Extension -in ".exe", ".dll", ".html" -and $_.Name -notmatch '(-test\.exe|^make-fake-rom\.exe|^gamepad-probe\.exe|^Qt6Test\.dll)$' } | Copy-Item -Destination $stage
 foreach ($d in "Config", "Lang", "Scripts", "platforms", "styles", "imageformats") {
     if (Test-Path (Join-Path $bin $d)) { Copy-Item (Join-Path $bin $d) (Join-Path $stage $d) -Recurse }
 }
