@@ -91,10 +91,64 @@ static PLUGIN_NOTIFICATION g_PluginNotification;
 static bool g_PluginInitilized = false;
 static char g_PluginSettingName[300];
 
+#ifdef _WIN32
+// Vortex64-Windows: a plugin's Qt configuration module is a separate DLL with its own copy of this library. On Linux the
+// module uses the plugin's copy (ELF symbol interposition); on Windows it must take the plugin's state explicitly, or its
+// settings functions are null (SetSetting crashed when "Apply" was pressed in the video settings).
+struct PJ64SettingsState
+{
+    PLUGIN_SETTINGS * Settings;
+    PLUGIN_SETTINGS2 * Settings2;
+    PLUGIN_SETTINGS3 * Settings3;
+    PLUGIN_SETTINGS_NOTIFICATION * SettingsNotification;
+    PLUGIN_NOTIFICATION * Notification;
+    bool * Initilized;
+    char * ModuleName;
+};
+EXPORT void PJ64GetSettingsState(PJ64SettingsState * State);
+#endif
 EXPORT void SetSettingInfo(PLUGIN_SETTINGS * info);
 EXPORT void SetSettingInfo2(PLUGIN_SETTINGS2 * info);
 EXPORT void SetSettingInfo3(PLUGIN_SETTINGS3 * info);
 EXPORT void SetPluginNotification(PLUGIN_NOTIFICATION * info);
+
+#ifdef _WIN32
+EXPORT void PJ64GetSettingsState(PJ64SettingsState * State)
+{
+    State->Settings = &g_PluginSettings;
+    State->Settings2 = &g_PluginSettings2;
+    State->Settings3 = &g_PluginSettings3;
+    State->SettingsNotification = &g_PluginSettingsNotification;
+    State->Notification = &g_PluginNotification;
+    State->Initilized = &g_PluginInitilized;
+    State->ModuleName = g_PluginSettingName;
+}
+
+void ImportPluginSettings(const wchar_t * PluginModuleName)
+{
+    HMODULE Plugin = GetModuleHandleW(PluginModuleName);
+    if (Plugin == nullptr)
+    {
+        return;
+    }
+    typedef void (*GetStateFn)(PJ64SettingsState *);
+    GetStateFn GetState = (GetStateFn)GetProcAddress(Plugin, "PJ64GetSettingsState");
+    if (GetState == nullptr || GetState == &PJ64GetSettingsState)
+    {
+        return; // (not a plugin, or this very module)
+    }
+    PJ64SettingsState State = {};
+    GetState(&State);
+    g_PluginSettings = *State.Settings;
+    g_PluginSettings2 = *State.Settings2;
+    g_PluginSettings3 = *State.Settings3;
+    g_PluginSettingsNotification = *State.SettingsNotification;
+    g_PluginNotification = *State.Notification;
+    g_PluginInitilized = *State.Initilized;
+    strncpy(g_PluginSettingName, State.ModuleName, sizeof(g_PluginSettingName) - 1);
+    g_PluginSettingName[sizeof(g_PluginSettingName) - 1] = 0;
+}
+#endif
 
 EXPORT void SetSettingInfo(PLUGIN_SETTINGS * info)
 {

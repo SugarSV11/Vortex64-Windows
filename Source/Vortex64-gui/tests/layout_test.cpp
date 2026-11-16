@@ -113,7 +113,7 @@ static void CheckStrip(MainWindow & Window, const char * What)
 
 int main(int argc, char ** argv)
 {
-    setvbuf(stdout, nullptr, _IOLBF, 0);
+    setvbuf(stdout, nullptr, VORTEX_LINEBUF, 0);
     QApplication Qt(argc, argv);
     ApplyTheme(Qt); // (the look of the application: what the rows are painted with)
     printf("screen scale: %s, device pixel ratio %.2f\n", qgetenv("QT_SCALE_FACTOR").isEmpty() ? "1" : qgetenv("QT_SCALE_FACTOR").constData(), Qt.devicePixelRatio());

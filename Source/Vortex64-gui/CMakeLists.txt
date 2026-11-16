@@ -9,12 +9,21 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 if(WIN32)
-    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets OPTIONAL_COMPONENTS Test)
     set(VORTEX_SCREENSAVER_SRC ScreenSaverInhibit_win.cpp ScreenSaverInhibit.h) # .h: AUTOMOC (Q_OBJECT)
+    set(VORTEX_PLATFORM_LIBS "")
+    set(VORTEX_SDL_LIB SDL2::SDL2)
+    set(VORTEX_XTEST_LIB "")
+    find_package(SDL2 CONFIG REQUIRED)
+    get_target_property(VORTEX_SDL_INCLUDE SDL2::SDL2 INTERFACE_INCLUDE_DIRECTORIES)
 else()
     find_package(Qt6 REQUIRED COMPONENTS Widgets Test DBus)
     find_package(X11 REQUIRED)
     set(VORTEX_SCREENSAVER_SRC ScreenSaverInhibit.cpp)
+    set(VORTEX_PLATFORM_LIBS Qt6::DBus X11::X11)
+    set(VORTEX_SDL_LIB SDL2)
+    set(VORTEX_XTEST_LIB :libXtst.so.6)
+    set(VORTEX_SDL_INCLUDE /usr/include/SDL2)
 endif()
 
 # The Vortex64 frontend: theme, icons, store, library model and views, shell
@@ -113,8 +122,8 @@ set_target_properties(vortex64 PROPERTIES
     OUTPUT_NAME vortex64
 )
 
-# The Linux test executables (X11/XTest/DBus, offscreen XDG harness) are not built on Windows yet.
-if(NOT WIN32)
+
+# Test region: on Windows the tests that need X11/XTest/uinput/DBus, the Qt Test module or GLideN64 are not built (see Docs/porting/02-PARITY.md)
 # Regression test for the Settings pages (offscreen Qt, isolated XDG dirs).
 # Run: ctest -R gui-settings   (or execute the two "settings-test" steps by hand)
 add_executable(settings-test EXCLUDE_FROM_ALL
@@ -173,35 +182,40 @@ if(TARGET Vortex64-input-qtconfig)
     add_dependencies(input-ui-test Vortex64-input-qtconfig)
 endif()
 
+if(NOT WIN32)
 # What the input dialog stored drives the N64 pad: SDL window + XTEST events + GetKeys of the plugin.
 add_executable(input-e2e-test EXCLUDE_FROM_ALL
     tests/input_e2e_test.cpp
     ../Vortex64-ui/Settings/UISettings.cpp
     ../Vortex64-cli/LinuxNotification.cpp
 )
-target_include_directories(input-e2e-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.. /usr/include/SDL2)
+target_include_directories(input-e2e-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${VORTEX_SDL_INCLUDE})
 set_target_properties(input-e2e-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 target_compile_definitions(input-e2e-test PRIVATE QT_NO_KEYWORDS)
-target_link_libraries(input-e2e-test PRIVATE Common Vortex64-core Qt6::Widgets SDL2 X11 :libXtst.so.6)
+target_link_libraries(input-e2e-test PRIVATE Common Vortex64-core Qt6::Widgets ${VORTEX_SDL_LIB} X11 ${VORTEX_XTEST_LIB})
 add_dependencies(input-e2e-test Vortex64-input)
+endif()
 
+if(NOT WIN32)
 # The input dialog with real X events (XTEST): the click on a row's button, then a key / a click.
 add_executable(input-capture-x11-test EXCLUDE_FROM_ALL
     tests/input_capture_x11_test.cpp
     ../Vortex64-ui/Settings/UISettings.cpp
     ../Vortex64-cli/LinuxNotification.cpp
 )
-target_include_directories(input-capture-x11-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.. /usr/include/SDL2)
+target_include_directories(input-capture-x11-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${VORTEX_SDL_INCLUDE})
 set_target_properties(input-capture-x11-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 target_compile_definitions(input-capture-x11-test PRIVATE QT_NO_KEYWORDS)
-target_link_libraries(input-capture-x11-test PRIVATE Common Vortex64-core Qt6::Widgets SDL2 X11 :libXtst.so.6)
+target_link_libraries(input-capture-x11-test PRIVATE Common Vortex64-core Qt6::Widgets ${VORTEX_SDL_LIB} X11 ${VORTEX_XTEST_LIB})
 add_dependencies(input-capture-x11-test Vortex64-input)
 if(TARGET Vortex64-input-qtconfig)
     add_dependencies(input-capture-x11-test Vortex64-input-qtconfig)
 endif()
+endif()
 
+if(NOT WIN32)
 # A virtual (uinput) gamepad: hot plug, assignment in the dialog, GetKeys, unplug, plug again.
 add_executable(input-gamepad-test EXCLUDE_FROM_ALL
     tests/input_gamepad_test.cpp
@@ -216,6 +230,7 @@ target_link_libraries(input-gamepad-test PRIVATE Common Vortex64-core Qt6::Widge
 add_dependencies(input-gamepad-test Vortex64-input)
 if(TARGET Vortex64-input-qtconfig)
     add_dependencies(input-gamepad-test Vortex64-input-qtconfig)
+endif()
 endif()
 
 # The audio plugin's output (SDL "disk" driver) at the volume of the settings; open/close cycles.
@@ -259,6 +274,7 @@ if(TARGET Vortex64-video-qtconfig)
     endif()
 endif()
 
+if(NOT WIN32 OR TARGET Qt6::Test)
 # Regression test for the Qt ROM browser.
 add_executable(rombrowser-test EXCLUDE_FROM_ALL
     tests/rombrowser_test.cpp
@@ -272,7 +288,9 @@ set_target_properties(rombrowser-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_RE
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 target_compile_definitions(rombrowser-test PRIVATE QT_NO_KEYWORDS)
 target_link_libraries(rombrowser-test PRIVATE Common Vortex64-core Qt6::Widgets Qt6::Test)
+endif()
 
+if(NOT WIN32 OR TARGET Qt6::Test)
 # Regression test for the Qt main menu (port of CMainMenu).
 add_executable(mainmenu-test EXCLUDE_FROM_ALL
     tests/mainmenu_test.cpp
@@ -283,7 +301,7 @@ add_executable(mainmenu-test EXCLUDE_FROM_ALL
     Settings/ShortCutsPage.cpp
     Dialogs/AboutDialog.cpp
     Dialogs/LogOptionsDialog.cpp
-    ScreenSaverInhibit.cpp
+    ${VORTEX_SCREENSAVER_SRC}
     PresentSync.cpp
     Dialogs/FirstRun.cpp
     Dialogs/CheatDialog.cpp
@@ -310,7 +328,8 @@ target_include_directories(mainmenu-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${C
 set_target_properties(mainmenu-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 target_compile_definitions(mainmenu-test PRIVATE QT_NO_KEYWORDS)
-target_link_libraries(mainmenu-test PRIVATE Common Vortex64-core Qt6::Widgets Qt6::DBus Qt6::Test X11::X11 vendored_png discord_rpc)
+target_link_libraries(mainmenu-test PRIVATE Common Vortex64-core Qt6::Widgets Qt6::Test ${VORTEX_PLATFORM_LIBS} vendored_png discord_rpc)
+endif()
 
 # Lifecycle test with a real ROM (needs an X server, see Scripts/linux/run-gui-tests.sh)
 add_executable(lifecycle-test EXCLUDE_FROM_ALL
@@ -322,7 +341,7 @@ add_executable(lifecycle-test EXCLUDE_FROM_ALL
     Settings/ShortCutsPage.cpp
     Dialogs/AboutDialog.cpp
     Dialogs/LogOptionsDialog.cpp
-    ScreenSaverInhibit.cpp
+    ${VORTEX_SCREENSAVER_SRC}
     PresentSync.cpp
     Dialogs/FirstRun.cpp
     Dialogs/CheatDialog.cpp
@@ -348,7 +367,7 @@ target_include_directories(lifecycle-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${
 set_target_properties(lifecycle-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 target_compile_definitions(lifecycle-test PRIVATE QT_NO_KEYWORDS)
-target_link_libraries(lifecycle-test PRIVATE Common Vortex64-core Qt6::Widgets Qt6::DBus X11::X11 vendored_png discord_rpc)
+target_link_libraries(lifecycle-test PRIVATE Common Vortex64-core Qt6::Widgets ${VORTEX_PLATFORM_LIBS} vendored_png discord_rpc)
 add_dependencies(lifecycle-test Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input)
 
 # The decisions of the synchronization of the presentation with the monitor (offscreen, no game)
@@ -362,6 +381,7 @@ set_target_properties(present-policy-test PROPERTIES CXX_STANDARD 17 CXX_STANDAR
 target_compile_definitions(present-policy-test PRIVATE QT_NO_KEYWORDS)
 target_link_libraries(present-policy-test PRIVATE Common Vortex64-core Qt6::Widgets)
 
+if(NOT WIN32)
 # The synchronization of the presentation with the monitor, with a real ROM and each video plugin (needs an X server)
 add_executable(present-sync-test EXCLUDE_FROM_ALL
     tests/present_sync_test.cpp
@@ -372,7 +392,7 @@ add_executable(present-sync-test EXCLUDE_FROM_ALL
     Settings/ShortCutsPage.cpp
     Dialogs/AboutDialog.cpp
     Dialogs/LogOptionsDialog.cpp
-    ScreenSaverInhibit.cpp
+    ${VORTEX_SCREENSAVER_SRC}
     PresentSync.cpp
     Dialogs/FirstRun.cpp
     Dialogs/CheatDialog.cpp
@@ -398,9 +418,11 @@ target_include_directories(present-sync-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 set_target_properties(present-sync-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 target_compile_definitions(present-sync-test PRIVATE QT_NO_KEYWORDS)
-target_link_libraries(present-sync-test PRIVATE Common Vortex64-core Qt6::Widgets Qt6::DBus X11::X11 vendored_png discord_rpc)
+target_link_libraries(present-sync-test PRIVATE Common Vortex64-core Qt6::Widgets ${VORTEX_PLATFORM_LIBS} vendored_png discord_rpc)
 add_dependencies(present-sync-test Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input)
+endif()
 
+if(NOT WIN32)
 # GLideN64 as the video plugin with a real ROM (needs an X server)
 add_executable(gliden64-test EXCLUDE_FROM_ALL
     tests/gliden64_test.cpp
@@ -411,7 +433,7 @@ add_executable(gliden64-test EXCLUDE_FROM_ALL
     Settings/ShortCutsPage.cpp
     Dialogs/AboutDialog.cpp
     Dialogs/LogOptionsDialog.cpp
-    ScreenSaverInhibit.cpp
+    ${VORTEX_SCREENSAVER_SRC}
     PresentSync.cpp
     Dialogs/FirstRun.cpp
     Dialogs/CheatDialog.cpp
@@ -437,10 +459,11 @@ target_include_directories(gliden64-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${C
 set_target_properties(gliden64-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 target_compile_definitions(gliden64-test PRIVATE QT_NO_KEYWORDS)
-target_link_libraries(gliden64-test PRIVATE Common Vortex64-core Qt6::Widgets Qt6::DBus X11::X11 vendored_png discord_rpc)
+target_link_libraries(gliden64-test PRIVATE Common Vortex64-core Qt6::Widgets ${VORTEX_PLATFORM_LIBS} vendored_png discord_rpc)
 add_dependencies(gliden64-test Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input)
 if(TARGET GLideN64)
     add_dependencies(gliden64-test GLideN64)
+endif()
 endif()
 
 # Differential test of the x64 recompiler against the interpreter (needs an X server)
@@ -453,7 +476,7 @@ add_executable(jit-fuzz-test EXCLUDE_FROM_ALL
     Settings/ShortCutsPage.cpp
     Dialogs/AboutDialog.cpp
     Dialogs/LogOptionsDialog.cpp
-    ScreenSaverInhibit.cpp
+    ${VORTEX_SCREENSAVER_SRC}
     PresentSync.cpp
     Dialogs/FirstRun.cpp
     Dialogs/CheatDialog.cpp
@@ -479,7 +502,7 @@ target_include_directories(jit-fuzz-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${C
 set_target_properties(jit-fuzz-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 target_compile_definitions(jit-fuzz-test PRIVATE QT_NO_KEYWORDS)
-target_link_libraries(jit-fuzz-test PRIVATE Common Vortex64-core Qt6::Widgets Qt6::DBus X11::X11 vendored_png discord_rpc)
+target_link_libraries(jit-fuzz-test PRIVATE Common Vortex64-core Qt6::Widgets ${VORTEX_PLATFORM_LIBS} vendored_png discord_rpc)
 add_dependencies(jit-fuzz-test Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input)
 
 # Debugger windows against a real ROM (needs an X server)
@@ -492,7 +515,7 @@ add_executable(debugger-test EXCLUDE_FROM_ALL
     Settings/ShortCutsPage.cpp
     Dialogs/AboutDialog.cpp
     Dialogs/LogOptionsDialog.cpp
-    ScreenSaverInhibit.cpp
+    ${VORTEX_SCREENSAVER_SRC}
     PresentSync.cpp
     Dialogs/FirstRun.cpp
     Dialogs/CheatDialog.cpp
@@ -518,9 +541,10 @@ target_include_directories(debugger-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${C
 set_target_properties(debugger-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 target_compile_definitions(debugger-test PRIVATE QT_NO_KEYWORDS)
-target_link_libraries(debugger-test PRIVATE Common Vortex64-core Qt6::Widgets Qt6::DBus X11::X11 vendored_png discord_rpc)
+target_link_libraries(debugger-test PRIVATE Common Vortex64-core Qt6::Widgets ${VORTEX_PLATFORM_LIBS} vendored_png discord_rpc)
 add_dependencies(debugger-test Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input)
 
+if(NOT WIN32)
 # Scripting (Scripts window and JavaScript engine) against a real ROM (needs an X server)
 add_executable(script-test EXCLUDE_FROM_ALL
     tests/script_test.cpp
@@ -531,7 +555,7 @@ add_executable(script-test EXCLUDE_FROM_ALL
     Settings/ShortCutsPage.cpp
     Dialogs/AboutDialog.cpp
     Dialogs/LogOptionsDialog.cpp
-    ScreenSaverInhibit.cpp
+    ${VORTEX_SCREENSAVER_SRC}
     PresentSync.cpp
     Dialogs/FirstRun.cpp
     Dialogs/CheatDialog.cpp
@@ -557,8 +581,9 @@ target_include_directories(script-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMA
 set_target_properties(script-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 target_compile_definitions(script-test PRIVATE QT_NO_KEYWORDS)
-target_link_libraries(script-test PRIVATE Common Vortex64-core Qt6::Widgets Qt6::DBus X11::X11 vendored_png discord_rpc)
+target_link_libraries(script-test PRIVATE Common Vortex64-core Qt6::Widgets ${VORTEX_PLATFORM_LIBS} vendored_png discord_rpc)
 add_dependencies(script-test Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input)
+endif()
 
 # Main window behaviour (status bar, place and size, focus, drop) against a real ROM (needs an X server)
 add_executable(mainwindow-test EXCLUDE_FROM_ALL
@@ -570,7 +595,7 @@ add_executable(mainwindow-test EXCLUDE_FROM_ALL
     Settings/ShortCutsPage.cpp
     Dialogs/AboutDialog.cpp
     Dialogs/LogOptionsDialog.cpp
-    ScreenSaverInhibit.cpp
+    ${VORTEX_SCREENSAVER_SRC}
     PresentSync.cpp
     Dialogs/FirstRun.cpp
     Dialogs/CheatDialog.cpp
@@ -596,7 +621,7 @@ target_include_directories(mainwindow-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} $
 set_target_properties(mainwindow-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 target_compile_definitions(mainwindow-test PRIVATE QT_NO_KEYWORDS)
-target_link_libraries(mainwindow-test PRIVATE Common Vortex64-core Qt6::Widgets Qt6::DBus X11::X11 vendored_png discord_rpc)
+target_link_libraries(mainwindow-test PRIVATE Common Vortex64-core Qt6::Widgets ${VORTEX_PLATFORM_LIBS} vendored_png discord_rpc)
 add_dependencies(mainwindow-test Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input)
 
 # Navigation of the Vortex64 frontend: library, search, favourites, history, views, settings (offscreen Qt)
@@ -609,7 +634,7 @@ add_executable(vortex-test EXCLUDE_FROM_ALL
     Settings/ShortCutsPage.cpp
     Dialogs/AboutDialog.cpp
     Dialogs/LogOptionsDialog.cpp
-    ScreenSaverInhibit.cpp
+    ${VORTEX_SCREENSAVER_SRC}
     PresentSync.cpp
     Dialogs/FirstRun.cpp
     Dialogs/CheatDialog.cpp
@@ -635,7 +660,7 @@ target_include_directories(vortex-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMA
 set_target_properties(vortex-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 target_compile_definitions(vortex-test PRIVATE QT_NO_KEYWORDS)
-target_link_libraries(vortex-test PRIVATE Common Vortex64-core Qt6::Widgets Qt6::DBus X11::X11 vendored_png discord_rpc)
+target_link_libraries(vortex-test PRIVATE Common Vortex64-core Qt6::Widgets ${VORTEX_PLATFORM_LIBS} vendored_png discord_rpc)
 add_dependencies(vortex-test Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input)
 
 # The check of the plugin directory (Qt only)
@@ -647,14 +672,19 @@ target_link_libraries(plugindir-test PRIVATE Qt6::Widgets)
 # The same application as vortex-test, for the tests of the interface: the languages and the layout (offscreen Qt)
 get_target_property(VORTEX_APP_TEST_SOURCES vortex-test SOURCES)
 list(REMOVE_ITEM VORTEX_APP_TEST_SOURCES tests/vortex_test.cpp)
-foreach(UI_TEST language layout input-ingame hotkey-pause first-run)
+if(WIN32)
+    set(VORTEX_UI_TESTS language layout first-run)
+else()
+    set(VORTEX_UI_TESTS language layout input-ingame hotkey-pause first-run)
+endif()
+foreach(UI_TEST ${VORTEX_UI_TESTS})
     string(REPLACE "-" "_" UI_TEST_FILE ${UI_TEST})
     add_executable(${UI_TEST}-test EXCLUDE_FROM_ALL tests/${UI_TEST_FILE}_test.cpp ${VORTEX_APP_TEST_SOURCES})
-    target_include_directories(${UI_TEST}-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.. /usr/include/SDL2)
+    target_include_directories(${UI_TEST}-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${VORTEX_SDL_INCLUDE})
     set_target_properties(${UI_TEST}-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
     target_compile_definitions(${UI_TEST}-test PRIVATE QT_NO_KEYWORDS)
-    target_link_libraries(${UI_TEST}-test PRIVATE Common Vortex64-core Qt6::Widgets Qt6::DBus X11::X11 vendored_png discord_rpc SDL2 :libXtst.so.6)
+    target_link_libraries(${UI_TEST}-test PRIVATE Common Vortex64-core Qt6::Widgets ${VORTEX_PLATFORM_LIBS} vendored_png discord_rpc ${VORTEX_SDL_LIB} ${VORTEX_XTEST_LIB})
     add_dependencies(${UI_TEST}-test Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input Vortex64-input-qtconfig)
 endforeach()
 
@@ -669,7 +699,7 @@ set_target_properties(plugins-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUI
 target_link_libraries(plugins-test PRIVATE Common Vortex64-core)
 add_dependencies(plugins-test Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input)
 
-endif() # NOT WIN32 (tests)
+# (end of the test region)
 
 # Debugger back end of upstream (Project64/UserInterface/Debugger), compiled unchanged: the
 # breakpoints, symbol table, debug MMU access, memory scanner, assembler and the CPU/DMA logs
@@ -781,45 +811,3 @@ set_target_properties(vortex64-icongen PROPERTIES CXX_STANDARD 17 CXX_STANDARD_R
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 target_compile_definitions(vortex64-icongen PRIVATE QT_NO_KEYWORDS)
 target_link_libraries(vortex64-icongen PRIVATE Qt6::Gui)
-
-if(WIN32)
-# Windows copy of the differential test of the x64 recompiler against the interpreter (no X server needed)
-add_executable(jit-fuzz-test EXCLUDE_FROM_ALL
-    tests/jit_fuzz_test.cpp
-    MainWindow.cpp
-    MainMenu.cpp
-    ${VORTEX_SOURCES}
-    VirtualKeys.cpp
-    Settings/ShortCutsPage.cpp
-    Dialogs/AboutDialog.cpp
-    Dialogs/LogOptionsDialog.cpp
-    ScreenSaverInhibit_win.cpp
-    ScreenSaverInhibit.h
-    PresentSync.cpp
-    Dialogs/FirstRun.cpp
-    Dialogs/CheatDialog.cpp
-    Dialogs/EnhancementDialog.cpp
-    Dialogs/EnhancementTree.cpp
-    about.qrc
-    ../Vortex64-ui/UserInterface/MenuShortCuts.cpp
-    ../Vortex64-ui/UserInterface/DiscordRPC.cpp
-    QtNotification.cpp
-    RomBrowser.cpp
-    RomInformation.cpp
-    Settings/SettingsDialog.cpp
-    Settings/SettingsPage.cpp
-    Settings/SettingsPages.cpp
-    Settings/VortexPages.cpp
-    ../Vortex64-ui/Settings/UISettings.cpp
-    ../Vortex64-ui/Plugins/PluginList.cpp
-    $<TARGET_OBJECTS:Vortex64-debugger-ui>
-    $<TARGET_OBJECTS:Vortex64-debugger-backend>
-    $<TARGET_OBJECTS:Vortex64-debugger-scripts>
-)
-target_include_directories(jit-fuzz-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)
-set_target_properties(jit-fuzz-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-target_compile_definitions(jit-fuzz-test PRIVATE QT_NO_KEYWORDS)
-target_link_libraries(jit-fuzz-test PRIVATE Common Vortex64-core Qt6::Widgets vendored_png discord_rpc)
-add_dependencies(jit-fuzz-test Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input)
-endif()

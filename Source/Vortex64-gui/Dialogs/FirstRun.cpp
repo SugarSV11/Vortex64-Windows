@@ -16,9 +16,14 @@ void ApplyFirstRunDefaults(MainWindow *)
     Vortex::ApplyLanguage("es");
 
     // GLideN64 when its plugin is installed, otherwise the registered default stays
-    CPath Plugin(g_Settings->LoadStringVal(Directory_Plugin).c_str(), "libGLideN64.so");
+#ifdef _WIN32
+    static const char * const GlideN64File = "GLideN64.dll";
+#else
+    static const char * const GlideN64File = "libGLideN64.so";
+#endif
+    CPath Plugin(g_Settings->LoadStringVal(Directory_Plugin).c_str(), GlideN64File);
     if (Plugin.Exists())
     {
-        g_Settings->SaveString(Plugin_GFX_Current, "libGLideN64.so");
+        g_Settings->SaveString(Plugin_GFX_Current, GlideN64File);
     }
 }

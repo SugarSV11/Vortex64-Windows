@@ -603,6 +603,9 @@ private:
 #endif
 extern "C" PJ64_QT_EXPORT void PJ64VideoQtConfig(void * hParent)
 {
+#ifdef _WIN32
+    ImportPluginSettings(L"Vortex64-video.dll");
+#endif
     (void)hParent;
     if (QApplication::instance() == nullptr)
     {

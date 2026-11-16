@@ -192,16 +192,28 @@ void CDebuggerUI::ScriptMouseEvent(int Kind, int X, int Y, int Button)
 
 void CDebuggerUI::ScriptStart(const std::string & Name)
 {
+    if (m_ScriptSystem == nullptr)
+    {
+        return; // (the script system is gone while the debugger is being closed)
+    }
     m_ScriptSystem->StartScript(Name.c_str(), (m_ScriptSystem->ScriptsDirPath() + Name).c_str());
 }
 
 void CDebuggerUI::ScriptStop(const std::string & Name)
 {
+    if (m_ScriptSystem == nullptr)
+    {
+        return;
+    }
     m_ScriptSystem->StopScript(Name.c_str());
 }
 
 CDebuggerUI::ScriptStatus CDebuggerUI::GetScriptStatus(const std::string & Name)
 {
+    if (m_ScriptSystem == nullptr)
+    {
+        return ScriptStopped; // (a window of the debugger can still ask while the debugger is being closed)
+    }
     switch (m_ScriptSystem->GetStatus(Name.c_str()))
     {
     case JS_STATUS_STARTING: return ScriptStarting;
@@ -212,26 +224,47 @@ CDebuggerUI::ScriptStatus CDebuggerUI::GetScriptStatus(const std::string & Name)
 
 void CDebuggerUI::ScriptInput(const std::string & Name, const std::string & Code)
 {
+    if (m_ScriptSystem == nullptr)
+    {
+        return;
+    }
     m_ScriptSystem->Input(Name.c_str(), Code.c_str());
 }
 
 std::string CDebuggerUI::ScriptsDir()
 {
+    if (m_ScriptSystem == nullptr)
+    {
+        return std::string();
+    }
     return m_ScriptSystem->ScriptsDirPath();
 }
 
 std::string CDebuggerUI::ScriptsInstallDir()
 {
+    if (m_ScriptSystem == nullptr)
+    {
+        return std::string();
+    }
     return m_ScriptSystem->InstallDirPath();
 }
 
 void CDebuggerUI::ScriptConsoleClear()
 {
+    if (m_ScriptSystem == nullptr)
+    {
+        return;
+    }
     m_ScriptSystem->ConsoleClear();
 }
 
 std::string CDebuggerUI::ScriptConsoleSnapshot(uint64_t & Sequence)
 {
+    if (m_ScriptSystem == nullptr)
+    {
+        Sequence = m_ScriptLogSequence;
+        return std::string();
+    }
     // the console text is appended together with the sequence number in ConsoleLog (under the
     // same lock as GetConsoleBuffer), so a sequence number that did not change while the text
     // was read belongs to that text
@@ -249,16 +282,28 @@ std::string CDebuggerUI::ScriptConsoleSnapshot(uint64_t & Sequence)
 
 std::set<std::string> CDebuggerUI::ScriptAutorunList()
 {
+    if (m_ScriptSystem == nullptr)
+    {
+        return std::set<std::string>();
+    }
     return m_ScriptSystem->AutorunList();
 }
 
 void CDebuggerUI::ScriptAutorunLoad()
 {
+    if (m_ScriptSystem == nullptr)
+    {
+        return;
+    }
     m_ScriptSystem->LoadAutorunList();
 }
 
 void CDebuggerUI::ScriptAutorunSave(const std::set<std::string> & List)
 {
+    if (m_ScriptSystem == nullptr)
+    {
+        return;
+    }
     m_ScriptSystem->AutorunList() = List;
     m_ScriptSystem->SaveAutorunList();
 }

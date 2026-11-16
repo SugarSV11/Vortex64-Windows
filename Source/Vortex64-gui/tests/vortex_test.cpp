@@ -129,7 +129,7 @@ static void CheckButtons(QWidget * Root, const char * What)
 
 int main(int argc, char ** argv)
 {
-    setvbuf(stdout, nullptr, _IOLBF, 0);
+    setvbuf(stdout, nullptr, VORTEX_LINEBUF, 0);
     QApplication App(argc, argv);
     QTemporaryDir Work;
     CHECK(Work.isValid());

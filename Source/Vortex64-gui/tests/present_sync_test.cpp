@@ -181,7 +181,7 @@ int main(int argc, char ** argv)
         printf("usage: %s <rom> [plugin library]\n", argv[0]);
         return 2;
     }
-    setvbuf(stdout, nullptr, _IOLBF, 0);
+    setvbuf(stdout, nullptr, VORTEX_LINEBUF, 0);
     const QString Rom = QString::fromLocal8Bit(argv[1]);
     const std::string VideoPlugin = argc > 2 ? argv[2] : "libGLideN64.so";
     setenv("SDL_VIDEODRIVER", "x11", 0);

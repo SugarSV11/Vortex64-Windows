@@ -16,6 +16,13 @@ project(Vortex64 CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 
+# stdout line buffering of the tests: the MSVC CRT rejects _IOLBF with size 0 (invalid parameter -> abort), so it is unbuffered there
+if(MSVC)
+    add_compile_definitions(VORTEX_LINEBUF=_IONBF)
+else()
+    add_compile_definitions(VORTEX_LINEBUF=_IOLBF)
+endif()
+
 if(MSVC)
     # debug symbols in every configuration (Release too): crash stacks and the sampling profiler (vortex64-cli --profile) need the .pdb files
     add_compile_options(/Zi)

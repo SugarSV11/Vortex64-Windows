@@ -216,7 +216,7 @@ static void OpenEverything(UiTestApp & App)
 
 int main(int argc, char ** argv)
 {
-    setvbuf(stdout, nullptr, _IOLBF, 0);
+    setvbuf(stdout, nullptr, VORTEX_LINEBUF, 0);
     if (argc >= 3 && QByteArray(argv[1]) == "--language-of")
     {
         QCoreApplication App(argc, argv);
@@ -421,7 +421,8 @@ int main(int argc, char ** argv)
     CHECK(RunLanguage("es_MX.UTF-8", AutoStore) == "es");
     CHECK(RunLanguage("en_US.UTF-8", AutoStore) == "en");
     CHECK(RunLanguage("de_DE.UTF-8", AutoStore) == "en");
-    CHECK(RunLanguage("", AutoStore) == "en");
+    // no locale given: the language of the system (English unless the system is Spanish); the Linux runs happen in a "C" locale
+    CHECK(RunLanguage("", AutoStore) == (QLocale::system().name().startsWith(QLatin1String("es")) ? "es" : "en"));
     // a store without the key is "no preference" too
     {
         QFile Target(App.Work.path() + "/none.json");

@@ -2,6 +2,11 @@
 // port of CMainMenu): menu structure for the "no game" and "game running"
 // states, enable/tick rules, shortcut installation from the CShortCuts table
 // and the settings a few commands change. Offscreen Qt, isolated XDG dirs.
+#ifdef _WIN32
+#define PJ64_TEST_LIB(n) n ".dll"
+#else
+#define PJ64_TEST_LIB(n) "lib" n ".so"
+#endif
 #include "../MainMenu.h"
 #include "../Vortex/Language.h"
 #include "../Settings/SettingsDialog.h"
@@ -301,7 +306,7 @@ int main(int argc, char ** argv)
         CHECK(g_Settings->LoadStringVal(Setting_CurrentLanguage) == "Español");
         CHECK(QApplication::activeModalWidget() == nullptr);
         CHECK(g_Settings->LoadStringVal(Plugin_GFX_Current) ==
-              (QFile::exists(QCoreApplication::applicationDirPath() + "/libGLideN64.so") ? "libGLideN64.so" : "something-else.so"));
+              (QFile::exists(QCoreApplication::applicationDirPath() + "/libGLideN64.so") ? PJ64_TEST_LIB("GLideN64") : "something-else.so"));
         Vortex::ApplyLanguage("en");
     }
 

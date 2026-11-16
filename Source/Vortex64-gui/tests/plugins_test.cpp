@@ -1,6 +1,11 @@
 // Plugin loading test (CPlugins over dlopen/dlsym): discovery of the four plugins,
 // interface/type validation, load errors, selecting another plugin and repeated
 // load/unload cycles. No window needed.
+#ifdef _WIN32
+#define PJ64_TEST_LIB(n) n ".dll"
+#else
+#define PJ64_TEST_LIB(n) "lib" n ".so"
+#endif
 #include <Common/path.h>
 #include <Vortex64-cli/LinuxNotification.h>
 #include <Vortex64-core/AppInit.h>
@@ -58,18 +63,18 @@ int main(int, char ** argv)
     CHECK(g_Plugins->Control() != nullptr && g_Plugins->Control()->DllConfig != nullptr);
 
     // a plugin of the wrong type is refused (audio plugin selected as video plugin)
-    g_Settings->SaveString(Plugin_GFX_Current, "libVortex64-audio.so");
+    g_Settings->SaveString(Plugin_GFX_Current, PJ64_TEST_LIB("Vortex64-audio"));
     Recreate(Window);
     CHECK(g_Plugins->Gfx() == nullptr);
     CHECK(g_Plugins->Audio() != nullptr && g_Plugins->Control() != nullptr && g_Plugins->RSP() != nullptr);
 
     // a file that is not there
-    g_Settings->SaveString(Plugin_GFX_Current, "libDoesNotExist.so");
+    g_Settings->SaveString(Plugin_GFX_Current, PJ64_TEST_LIB("DoesNotExist"));
     Recreate(Window);
     CHECK(g_Plugins->Gfx() == nullptr);
 
     // a shared object without the plugin entry points
-    g_Settings->SaveString(Plugin_GFX_Current, "libVortex64-video-qtconfig.so");
+    g_Settings->SaveString(Plugin_GFX_Current, PJ64_TEST_LIB("Vortex64-video-qtconfig"));
     Recreate(Window);
     CHECK(g_Plugins->Gfx() == nullptr);
 
@@ -80,7 +85,7 @@ int main(int, char ** argv)
     CHECK(g_Plugins->Gfx() == nullptr);
 
     // back to the valid selection, then repeated load/unload cycles
-    g_Settings->SaveString(Plugin_GFX_Current, "libVortex64-video.so");
+    g_Settings->SaveString(Plugin_GFX_Current, PJ64_TEST_LIB("Vortex64-video"));
     for (int i = 0; i < 5; i++)
     {
         Recreate(Window);

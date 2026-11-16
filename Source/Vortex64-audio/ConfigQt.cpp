@@ -204,6 +204,9 @@ private:
 #endif
 extern "C" PJ64_QT_EXPORT void PJ64AudioQtConfig(void * hParent)
 {
+#ifdef _WIN32
+    ImportPluginSettings(L"Vortex64-audio.dll");
+#endif
     (void)hParent;
     if (QApplication::instance() == nullptr)
     {

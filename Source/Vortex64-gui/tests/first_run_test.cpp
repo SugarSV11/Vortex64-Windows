@@ -122,7 +122,7 @@ static fs::path MakeSandbox(fs::path & Config, fs::path & Data)
 
 int main(int argc, char ** argv)
 {
-    setvbuf(stdout, nullptr, _IOLBF, 0);
+    setvbuf(stdout, nullptr, VORTEX_LINEBUF, 0);
     const std::string Mode = argc > 1 ? argv[1] : "new";
     if (Mode != "new" && Mode != "legacy")
     {

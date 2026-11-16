@@ -285,7 +285,9 @@ int main(int argc, char ** argv)
     const bool Input = strcmp(argv[1], "input") == 0;
     g_CheckText = Audio ? "Mute" : "Vertical sync";
     const PLUGIN_TYPE Type = Input ? PLUGIN_TYPE_CONTROLLER : (Audio ? PLUGIN_TYPE_AUDIO : PLUGIN_TYPE_VIDEO);
-    const std::string StateFile = std::string(getenv("XDG_CONFIG_HOME") ? getenv("XDG_CONFIG_HOME") : "/tmp") + "/plugin-config-state-" + argv[1];
+    // (Windows: the user data of the test run is under APPDATA, there is no XDG_CONFIG_HOME and no /tmp)
+    const char * StateDir = getenv("XDG_CONFIG_HOME") ? getenv("XDG_CONFIG_HOME") : (getenv("APPDATA") ? getenv("APPDATA") : "/tmp");
+    const std::string StateFile = std::string(StateDir) + "/plugin-config-state-" + argv[1];
     QApplication App(argc, argv);
     static CLinuxNotification Notify;
     const std::string Base = CPath(CPath::MODULE_DIRECTORY).GetDirectory();

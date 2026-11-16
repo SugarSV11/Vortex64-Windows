@@ -17,6 +17,7 @@
 // that SDL reports, never the text of the key), that of a mouse button is its SDL
 // button number, the wheel is a momentary button. Joystick scanning still goes
 // through CProject64Input::ScanDevices().
+#include <Settings/Settings.h> // ImportPluginSettings (Windows)
 #include "CProject64Input.h"
 #include "N64Controller.h"
 #include "Shortcuts.h"
@@ -1898,6 +1899,9 @@ void ControllerPage::RemoveMapping(const BUTTON & Button)
 #endif
 extern "C" PJ64_QT_EXPORT void PJ64InputQtConfig(void * /*hParent*/)
 {
+#ifdef _WIN32
+    ImportPluginSettings(L"Vortex64-input.dll");
+#endif
     int Argc = 0;
     QApplication * Owned = nullptr;
     if (QApplication::instance() == nullptr)

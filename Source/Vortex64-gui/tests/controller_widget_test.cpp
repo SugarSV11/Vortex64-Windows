@@ -11,7 +11,8 @@ static int g_Fail = 0;
 
 int main(int argc, char ** argv)
 {
-    qputenv("QT_QPA_PLATFORM", "offscreen");
+    if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) // (Windows: the Qt of vcpkg has no "offscreen" plugin; the runner sets "minimal")
+        qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication App(argc, argv);
     if (std::getenv("VX_DARK"))
     {

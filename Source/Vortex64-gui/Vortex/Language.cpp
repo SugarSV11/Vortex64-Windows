@@ -44,6 +44,42 @@ const QHash<QByteArray, const char *> & CatalogIndex()
     return Index;
 }
 
+// Spanish for the standard buttons of Qt, used when the translation files of Qt (qtbase_es.qm) are not installed (they are
+// not part of the Qt of vcpkg on Windows): the standard buttons (OK, Cancel, Yes, No, Close, ...) of QDialogButtonBox / QMessageBox
+class SpanishButtons : public QTranslator
+{
+public:
+    using QTranslator::QTranslator;
+    bool isEmpty() const override
+    {
+        return false;
+    }
+    QString translate(const char * Context, const char * Source, const char * Disambiguation, int N) const override
+    {
+        Q_UNUSED(Disambiguation);
+        Q_UNUSED(N);
+        if (Context == nullptr || Source == nullptr)
+        {
+            return QString();
+        }
+        const QByteArray C(Context);
+        if (C != "QPlatformTheme" && C != "QDialogButtonBox" && C != "QMessageBox")
+        {
+            return QString();
+        }
+        static const QHash<QByteArray, QString> Texts = {
+            {"OK", QStringLiteral("Aceptar")}, {"&OK", QStringLiteral("&Aceptar")}, {"Cancel", QStringLiteral("Cancelar")}, {"&Cancel", QStringLiteral("&Cancelar")},
+            {"Close", QStringLiteral("Cerrar")}, {"&Close", QStringLiteral("&Cerrar")}, {"Yes", QStringLiteral("Sí")}, {"&Yes", QStringLiteral("&Sí")},
+            {"No", QStringLiteral("No")}, {"&No", QStringLiteral("&No")}, {"Yes to &All", QStringLiteral("Sí a &todo")}, {"N&o to All", QStringLiteral("N&o a todo")},
+            {"Apply", QStringLiteral("Aplicar")}, {"Reset", QStringLiteral("Restablecer")}, {"Restore Defaults", QStringLiteral("Restaurar valores")},
+            {"Help", QStringLiteral("Ayuda")}, {"Save", QStringLiteral("Guardar")}, {"&Save", QStringLiteral("&Guardar")}, {"Save All", QStringLiteral("Guardar todo")},
+            {"Open", QStringLiteral("Abrir")}, {"Abort", QStringLiteral("Cancelar")}, {"Retry", QStringLiteral("Reintentar")}, {"Ignore", QStringLiteral("Omitir")},
+            {"Discard", QStringLiteral("Descartar")}, {"Don't Save", QStringLiteral("No guardar")}, {"Close without Saving", QStringLiteral("Cerrar sin guardar")}};
+        const auto It = Texts.constFind(QByteArray(Source));
+        return It == Texts.constEnd() ? QString() : It.value();
+    }
+};
+
 // The translator of the standard texts of Qt (OK, Cancel, Yes, No, the file dialog, ...)
 class QtTexts
 {
@@ -66,8 +102,10 @@ public:
             }
             else
             {
+                // no Qt translation files here: the standard buttons are translated by this small table
                 delete Translator;
-                Translator = nullptr;
+                Translator = new SpanishButtons(QCoreApplication::instance());
+                QCoreApplication::installTranslator(Translator);
             }
         }
     }

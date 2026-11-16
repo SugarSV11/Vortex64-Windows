@@ -10,6 +10,11 @@
 // A control bound to a SettingID must (1) become "changed" when the user edits
 // it, (2) write the SettingID on Apply, (3) return to the default on Reset +
 // Apply, and (4) survive a restart.
+#ifdef _WIN32
+#define PJ64_TEST_LIB(n) n ".dll"
+#else
+#define PJ64_TEST_LIB(n) "lib" n ".so"
+#endif
 #include "../Settings/SettingsDialog.h"
 #include "../Settings/SettingsPages.h"
 #include "../Settings/ShortCutsPage.h"
@@ -122,10 +127,10 @@ static int DoWrite()
     {
         CHECK(C->count() >= 1);
     }
-    CHECK(Combos.at(0)->currentData().toString() == "libVortex64-video.so");
-    CHECK(Combos.at(1)->currentData().toString() == "libVortex64-audio.so");
-    CHECK(Combos.at(2)->currentData().toString() == "libVortex64-input.so");
-    CHECK(Combos.at(3)->currentData().toString() == "libVortex64-rsp.so");
+    CHECK(Combos.at(0)->currentData().toString() == PJ64_TEST_LIB("Vortex64-video"));
+    CHECK(Combos.at(1)->currentData().toString() == PJ64_TEST_LIB("Vortex64-audio"));
+    CHECK(Combos.at(2)->currentData().toString() == PJ64_TEST_LIB("Vortex64-input"));
+    CHECK(Combos.at(3)->currentData().toString() == PJ64_TEST_LIB("Vortex64-rsp"));
     // helper modules (Qt configuration dialogs) are not plugins and must not be listed
     for (QComboBox * C : Combos)
     {

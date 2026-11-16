@@ -447,7 +447,7 @@ int main(int argc, char ** argv)
         printf("usage: %s <rom>\n", argv[0]);
         return 2;
     }
-    setvbuf(stdout, nullptr, _IOLBF, 0);
+    setvbuf(stdout, nullptr, VORTEX_LINEBUF, 0);
     setenv("SDL_VIDEODRIVER", "x11", 0);
     QApplication App(argc, argv);
     g_X = XOpenDisplay(nullptr);

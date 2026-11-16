@@ -232,3 +232,23 @@ Nuevo: instancia única real en Windows (archivo mapeado con nombre; `Tests/inst
 verificados save states (F5/F7), ROM en .zip, diálogo de Trucos, depurador (al activarlo) y menús.
 GLideN64 NO portado (alcance de varias horas; el plugin de vídeo propio funciona y es el predeterminado).
 ctest: common, core, rsp, instance, 2x cli-boot, 4x jit-fuzz = 10/10, más `jit-fuzz-directed` (PASS, 2 min 48 s).
+
+## Hito 18: tests de la GUI portados (2026-11-15)
+`ctest -R ^gui-`: **78/78** (incluye fixtures de limpieza de perfil). Cubren: biblioteca/menús (`vortex`), idiomas es/en (`language`), layout a escalas 1/1.25/1.5/2,
+política de presentación (1085 comprobaciones), widget del mando N64 a 4 escalas, Ajustes (write/read/rdb/lookup), configuración de plugins (vídeo/audio/input: write/read),
+captura de entradas (2 variantes) y la UI de Input (es/en a 2 escalas), carga de plugins (`plugins`, `plugindir`).
+Se ejecutan en Qt `minimal:enable_fonts` (el Qt de vcpkg no trae el plugin `offscreen`), con perfil de usuario aislado por grupo.
+
+Fallos REALES de la aplicación encontrados por estas pruebas y corregidos:
+1. `setvbuf(stdout, nullptr, _IOLBF, 0)` aborta con MSVC (parámetro inválido): macro `VORTEX_LINEBUF`.
+2. Caída al cerrar el depurador: el glue de scripts usaba el sistema de scripts ya destruido (acceso nulo) -> protegido.
+3. Faltaban las traducciones de Qt (`qtbase_es`) en Windows: botones estándar en inglés en modo español -> tabla propia (`SpanishButtons`).
+4. Nombres de plugin `.so` fijos en `PluginDirCheck`, `FirstRun` y la comprobación de GLideN64 -> `.dll` en Windows.
+5. **Caída al pulsar Aplicar en la configuración de vídeo/audio/input:** el módulo Qt de cada plugin es una DLL aparte con su propia copia de la
+   biblioteca de ajustes (en Linux comparte la del plugin por interposición ELF); sus punteros a funciones eran nulos -> `PJ64GetSettingsState`/`ImportPluginSettings`.
+Infraestructura: `Source/Common/Windows/compat/crash_report.h` (pila simbolizada de excepciones, terminate, abort, parámetros inválidos, llamada por puntero nulo;
+`SetErrorMode` para que no salgan diálogos de Windows) enlazado en todos los tests.
+
+NO portados (dependen de POSIX/X11/hardware o del módulo Qt Test): `mainwindow-test` (socket Unix de Discord), `lifecycle-test` (symlink), `first-run-test` y
+`migration-test` (HOME/XDG, fork), `audio-test` (dlopen NOLOAD), `script-test` (ScriptShim POSIX), `input-e2e/-capture-x11/-ingame/hotkey-pause/-gamepad` (X11/XTest/uinput),
+`present-sync-test` (X), `gliden64-test`; `rombrowser-test` y `mainmenu-test` necesitan `qtbase[testlib]` (no instalado), `debugger-test` necesita una ROM real.

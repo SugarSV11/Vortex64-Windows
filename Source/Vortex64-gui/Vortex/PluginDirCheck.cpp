@@ -27,7 +27,11 @@ QStringList PluginsDifferentFromOwn(const QString & SelectedDirectory, const QSt
     {
         return Different;
     }
+#ifdef _WIN32
+    static const char * const Names[] = {"Vortex64-video.dll", "Vortex64-audio.dll", "Vortex64-input.dll", "Vortex64-rsp.dll", "Vortex64-video-qtconfig.dll", "Vortex64-audio-qtconfig.dll", "Vortex64-input-qtconfig.dll", "GLideN64.dll"};
+#else
     static const char * const Names[] = {"libVortex64-video.so", "libVortex64-audio.so", "libVortex64-input.so", "libVortex64-rsp.so", "libVortex64-video-qtconfig.so", "libVortex64-audio-qtconfig.so", "libVortex64-input-qtconfig.so", "libGLideN64.so"};
+#endif
     for (const char * Name : Names)
     {
         const QString A = Selected.filePath(QString::fromLatin1(Name)), B = Own.filePath(QString::fromLatin1(Name));

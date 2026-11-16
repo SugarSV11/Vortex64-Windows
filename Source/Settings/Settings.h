@@ -12,6 +12,11 @@ extern "C" {
     unsigned int GetSystemSetting(short SettingID);
     const char * GetSystemSettingSz(short SettingID, char * Buffer, int BufferLen);
 
+#ifdef _WIN32
+    // Vortex64-Windows: called by a plugin's Qt configuration module (a separate DLL) to use the settings of its plugin
+    void ImportPluginSettings(const wchar_t * PluginModuleName);
+#endif
+
     // Set a settings value
     void SetSetting(short SettingID, unsigned int Value);
     void SetSettingSz(short SettingID, const char * Value);

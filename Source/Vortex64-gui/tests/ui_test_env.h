@@ -15,6 +15,11 @@
 #include <Vortex64-core/Settings/DebugSettings.h>
 #include <Vortex64-ui/Settings/UISettings.h>
 
+#ifdef _WIN32
+#include <Common/Windows/compat/crash_report.h>
+// every test reports a crash/abort with a stack instead of ending silently
+static const int g_CrashReporterInstalled = (CrashReport::Install(), 0);
+#endif
 #include <QApplication>
 #include <QDir>
 #include <QElapsedTimer>
