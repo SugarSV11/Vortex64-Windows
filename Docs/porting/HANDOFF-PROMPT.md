@@ -70,3 +70,14 @@ Crea una carpeta nueva `C:\Users\Sugar\OneDrive\Desktop\Vortex64-Windows-ENTREGA
 Dentro de la carpeta de entrega NO pongas nada más (ni ROMs, ni binarios sueltos, ni logs). Al terminar dime: la ruta de la carpeta, el
 tamaño y SHA-256 de cada zip, qué pruebas pasaron (cifras reales de ctest), y una lista honesta de lo que NO está al nivel de Linux.
 NO subas nada a GitHub: la subida la decido yo después de revisar la entrega.
+
+---
+
+## Actualización (final de la sesión del 2026-11-15)
+- Último commit: ver `git log`. Qt con `testlib` ya está instalado y TODO compila. `ctest -LE window -E directed` = 113/113.
+- Con `-DVORTEX_TEST_ROM=<SM64 real>` también pasan `gui-rombrowser` y `gui-debugger`. `lifecycle-test` pasa (ventana real, `-Qpa windows`).
+- PENDIENTE real: `mainwindow-test` (ventana real + Discord falso por named pipe): una vez falló solo por la semántica de FatalError (ya ajustada en el
+  test) y otra vez se quedó colgado tras "mainwindow: status bar"; hay que repetirlo para ver si es intermitente o un bug (matar `mainwindow-test.exe` si se cuelga).
+- NO portado: `script-test` (916 líneas, sockets BSD + shells POSIX + contadores del ScriptShim de Linux). En Windows `ScriptShimTerminateProcesses` es un stub (los
+  procesos de `exec()` no se terminan al cerrar): una solución es un Job Object con KILL_ON_JOB_CLOSE para los procesos creados por los scripts.
+- Falta la ENTREGA (carpeta `Vortex64-Windows-ENTREGA` con los dos zip) y el informe final.

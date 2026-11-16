@@ -456,7 +456,11 @@ int main(int argc, char ** argv)
             g_Notify->FatalError("fatal error of a thread");
             After = true;
         });
+#ifndef _WIN32
+        // (POSIX: pthread_exit unwinds the thread, so its destructors run. Windows: FatalError ends the thread with ExitThread, which does
+        // not unwind - unwinding through the frames of the recompiler's generated code, which has no unwind information, would end the process)
         CHECK(WaitFor([&]() { return Ended.load(); }, 5000));
+#endif
         Fatal.join();
         CHECK(!After);
         printf("mainwindow: fatal error ended its thread\n");

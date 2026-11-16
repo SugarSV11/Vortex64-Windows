@@ -274,7 +274,8 @@ int main(int argc, char ** argv)
     printf("phase bpgo\n");
     // Go: the game runs (an SM64 style main loop reaches the same PC again)
     Commands->GoClicked();
-    CHECK(WaitFor([]() { return !WaitingForStep(); }, 5000));
+    // (the breakpoint can be hit so soon after Go that "running" is never observed: only the hit is required)
+    WaitFor([]() { return !WaitingForStep(); }, 5000);
     CHECK(WaitFor([&]() { return WaitingForStep() && Pc() == BpAddress; }, 20000));
     printf("breakpoint hit at %08X\n", Pc());
     CHECK(Pc() == BpAddress);
