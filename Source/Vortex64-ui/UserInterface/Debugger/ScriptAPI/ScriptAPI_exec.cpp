@@ -86,26 +86,40 @@ duk_ret_t ScriptAPI::js_exec(duk_context * ctx)
         CloseHandle(hStdOut_w);
         CloseHandle(hStdErr_w);
 
+        // Both pipes are read while the shell runs, and the reading ends when the shell has ended and the pipes are
+        // empty. (Waiting for the end of the pipes would also wait for what the shell started in the background,
+        // e.g. "start /b prog", because those processes inherit the pipe handles; on Linux they are not waited for.)
         char buffer[1024];
-        DWORD nBytesRead;
-        while (ReadFile(hStdOut_r, buffer, sizeof(buffer), &nBytesRead, nullptr) && nBytesRead != 0)
-        {
-            for (size_t i = 0; i < nBytesRead; i++)
+        auto Drain = [&](HANDLE Pipe, stdstr & Result, bool Echo) {
+            bool GotData = false;
+            DWORD nBytesAvail = 0, nBytesRead = 0;
+            while (PeekNamedPipe(Pipe, nullptr, 0, nullptr, &nBytesAvail, nullptr) && nBytesAvail != 0)
             {
-                resultStdOut += buffer[i];
+                if (!ReadFile(Pipe, buffer, sizeof(buffer), &nBytesRead, nullptr) || nBytesRead == 0)
+                {
+                    break;
+                }
+                GotData = true;
+                Result.append(buffer, nBytesRead);
+                if (Echo && options.bVerbose)
+                {
+                    sys->ConsolePrint("%.*s", nBytesRead, buffer);
+                }
             }
-
-            if (options.bVerbose)
-            {
-                sys->ConsolePrint("%.*s", nBytesRead, buffer);
-            }
-        }
-
-        while (ReadFile(hStdErr_r, buffer, sizeof(buffer), &nBytesRead, nullptr) && nBytesRead != 0)
+            return GotData;
+        };
+        for (;;)
         {
-            for (size_t i = 0; i < nBytesRead; i++)
+            const bool Exited = WaitForSingleObject(processInfo.hProcess, 0) == WAIT_OBJECT_0;
+            const bool GotOut = Drain(hStdOut_r, resultStdOut, true);
+            const bool GotErr = Drain(hStdErr_r, resultStdErr, false);
+            if (Exited && !GotOut && !GotErr)
             {
-                resultStdErr += buffer[i];
+                break; // (data written before the shell ended was read by the Drain above this check's wait)
+            }
+            if (!GotOut && !GotErr)
+            {
+                WaitForSingleObject(processInfo.hProcess, 5);
             }
         }
 

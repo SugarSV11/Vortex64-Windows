@@ -544,7 +544,6 @@ target_compile_definitions(debugger-test PRIVATE QT_NO_KEYWORDS)
 target_link_libraries(debugger-test PRIVATE Common Vortex64-core Qt6::Widgets ${VORTEX_PLATFORM_LIBS} vendored_png discord_rpc)
 add_dependencies(debugger-test Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input)
 
-if(NOT WIN32)
 # Scripting (Scripts window and JavaScript engine) against a real ROM (needs an X server)
 add_executable(script-test EXCLUDE_FROM_ALL
     tests/script_test.cpp
@@ -583,6 +582,8 @@ set_target_properties(script-test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIR
 target_compile_definitions(script-test PRIVATE QT_NO_KEYWORDS)
 target_link_libraries(script-test PRIVATE Common Vortex64-core Qt6::Widgets ${VORTEX_PLATFORM_LIBS} vendored_png discord_rpc)
 add_dependencies(script-test Vortex64-video Vortex64-rsp Vortex64-audio Vortex64-input)
+if(WIN32)
+    target_link_libraries(script-test PRIVATE ws2_32)
 endif()
 
 # Main window behaviour (status bar, place and size, focus, drop) against a real ROM (needs an X server)

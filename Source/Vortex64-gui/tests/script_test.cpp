@@ -47,6 +47,16 @@
 #include <cstdlib>
 #include <ctime>
 #include <functional>
+#include <thread>
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#include <tlhelp32.h>
+typedef int socklen_t;
+#define VT_CLOSESOCK(fd) closesocket(fd)
+static void SetNonBlocking(int Fd) { u_long On = 1; ioctlsocket((SOCKET)Fd, FIONBIO, &On); }
+#else
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -54,7 +64,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#include <thread>
+#define VT_CLOSESOCK(fd) close(fd)
+static void SetNonBlocking(int Fd) { fcntl(Fd, F_SETFL, O_NONBLOCK); }
+#endif
 
 static int g_Failures = 0;
 #define CHECK(cond)                                                \
@@ -182,7 +194,46 @@ static void Input(const QString & Name, const QString & Code)
     g_View->SubmitInput();
 }
 
+#ifdef _WIN32
+// Windows: the script system has no thread counter of its own, so the threads of the whole process stand in for it
+// (every check compares against the value taken when the window opened).
+static int ScriptShimLiveThreads()
+{
+    int Count = 0;
+    HANDLE Snap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+    if (Snap != INVALID_HANDLE_VALUE)
+    {
+        THREADENTRY32 Entry = {sizeof(Entry)};
+        for (BOOL Ok = Thread32First(Snap, &Entry); Ok; Ok = Thread32Next(Snap, &Entry))
+        {
+            Count += Entry.th32OwnerProcessID == GetCurrentProcessId() ? 1 : 0;
+        }
+        CloseHandle(Snap);
+    }
+    return Count;
+}
+// the process has a few threads of its own that come and go (Qt, SDL, the video plugin): a small slack, and the values are printed
+static bool ThreadsBack(int Base)
+{
+    const int Now = ScriptShimLiveThreads();
+    static int LastShown = -1;
+    if (Now != LastShown && Now > Base)
+    {
+        LastShown = Now;
+        printf("script: threads now %d, at the start %d\n", Now, Base);
+    }
+    return Now <= Base + 6;
+}
+static QStringList FdTargets() { return QStringList(); }
+static int OpenFds()
+{
+    DWORD Count = 0;
+    GetProcessHandleCount(GetCurrentProcess(), &Count);
+    return (int)Count;
+}
+#else
 int ScriptShimLiveThreads(); // ScriptShim.cpp: threads of the script system that have not ended
+static bool ThreadsBack(int Base) { return ScriptShimLiveThreads() == Base; }
 
 static QStringList FdTargets()
 {
@@ -198,6 +249,7 @@ static int OpenFds()
 {
     return QDir("/proc/self/fd").entryList(QDir::NoDotAndDotDot).size();
 }
+#endif
 
 static int Count(const QString & Text, const QString & Part)
 {
@@ -212,7 +264,7 @@ static bool TcpOpen(uint16_t Port)
     Address.sin_port = htons(Port);
     inet_pton(AF_INET, "127.0.0.1", &Address.sin_addr);
     const bool Connected = connect(Fd, (sockaddr *)&Address, sizeof(Address)) == 0;
-    close(Fd);
+    VT_CLOSESOCK(Fd);
     return Connected;
 }
 
@@ -225,13 +277,18 @@ static uint16_t FreePort()
     bind(Fd, (sockaddr *)&Address, sizeof(Address));
     socklen_t Length = sizeof(Address);
     getsockname(Fd, (sockaddr *)&Address, &Length);
-    close(Fd);
+    VT_CLOSESOCK(Fd);
     return ntohs(Address.sin_port);
 }
 
 static bool ProcessExists(const char * Pattern)
 {
+#ifdef _WIN32
+    // (the pattern is a regular expression written so that this command line does not match it)
+    return system((QString("powershell -NoProfile -Command \"if (Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match '%1' }) { exit 0 } else { exit 1 }\"").arg(Pattern)).toUtf8().constData()) == 0;
+#else
     return system((QString("pgrep -f '%1' >/dev/null 2>&1").arg(Pattern)).toUtf8().constData()) == 0;
+#endif
 }
 
 int main(int argc, char ** argv)
@@ -243,7 +300,12 @@ int main(int argc, char ** argv)
     }
     setvbuf(stdout, nullptr, VORTEX_LINEBUF, 0);
     const QString Rom = QString::fromLocal8Bit(argv[1]);
+#ifndef _WIN32
     setenv("SDL_VIDEODRIVER", "x11", 0);
+#else
+    WSADATA Wsa;
+    WSAStartup(MAKEWORD(2, 2), &Wsa);
+#endif
     QApplication App(argc, argv);
     Vortex::Store::Instance().SetLanguage("en"); // (the texts these checks read are the English ones, whatever the language of the system)
     MainWindow Window;
@@ -301,7 +363,9 @@ int main(int argc, char ** argv)
     const int BaseThreads = ScriptShimLiveThreads();
     const int BaseFds = OpenFds();
     const QStringList BaseTargets = FdTargets();
+#ifndef _WIN32
     CHECK(BaseThreads == 1); // the script system's own thread
+#endif
 
     // the scripts shipped with the program are in the user's scripts directory
     CHECK(QFile::exists(g_Dir + "/example.js"));
@@ -447,7 +511,7 @@ int main(int argc, char ** argv)
                         "fs.rmdir(d);\n"
                         "console.log('gone ' + (!fs.exists(d)));\n"
                         "var out = exec('echo hi from exec');\n"
-                        "console.log('exec [' + out.replace(/\\n/g, '|') + ']');\n"
+                        "console.log('exec [' + out.replace(/\\r?\\n/g, '|') + ']');\n"
                         "try { exec('exit 3'); } catch (e) { console.log('exec failed ' + e.status); }\n"
                         "console.log('dirs ' + (pj64.scriptsDirectory.length > 0) + ' ' + (pj64.installDirectory.length > 0));\n"
                         "console.log('install [' + pj64.installDirectory + '] scripts [' + pj64.scriptsDirectory + '] modules [' + pj64.modulesDirectory + ']');\n"
@@ -507,9 +571,22 @@ int main(int argc, char ** argv)
     // workers reuse, which made them spin at 100% of a core
     {
         Pump(200);
+#ifdef _WIN32
+        // (clock() is wall time with MSVC: the CPU time of the process comes from GetProcessTimes)
+        auto CpuNow = []() {
+            FILETIME Create, Exit, Kernel, User;
+            GetProcessTimes(GetCurrentProcess(), &Create, &Exit, &Kernel, &User);
+            auto Ticks = [](FILETIME F) { return double((uint64_t(F.dwHighDateTime) << 32) | F.dwLowDateTime) / 1e7; };
+            return Ticks(Kernel) + Ticks(User);
+        };
+        const double Before = CpuNow();
+        Pump(1500);
+        const double CpuSeconds = CpuNow() - Before;
+#else
         const clock_t Before = clock();
         Pump(1500);
         const double CpuSeconds = double(clock() - Before) / CLOCKS_PER_SEC;
+#endif
         printf("script: idle server used %.2f s of CPU in 1.5 s\n", CpuSeconds);
         CHECK(CpuSeconds < 0.7);
     }
@@ -536,7 +613,7 @@ int main(int argc, char ** argv)
         for (int i = 0; i < 4; i++)
         {
             Fillers[i] = socket(AF_INET, SOCK_STREAM, 0);
-            fcntl(Fillers[i], F_SETFL, O_NONBLOCK);
+            SetNonBlocking(Fillers[i]);
             connect(Fillers[i], (sockaddr *)&Address, sizeof(Address));
         }
         WriteScript("blackhole.js", QString("script.keepalive(true);\nvar c = new Socket();\nc.on('error', function (e) {});\nc.connect(%1, '127.0.0.1');\nconsole.log('connecting');\n").arg(ntohs(Address.sin_port)));
@@ -552,13 +629,19 @@ int main(int argc, char ** argv)
         CHECK(StopTime.elapsed() < 5000);
         for (int Fd : Fillers)
         {
-            close(Fd);
+            VT_CLOSESOCK(Fd);
         }
-        close(Full);
+        VT_CLOSESOCK(Full);
     }
-    CHECK(WaitFor([&]() { return ScriptShimLiveThreads() == BaseThreads; }, 5000));
+    CHECK(WaitFor([&]() { return ThreadsBack(BaseThreads); }, 5000));
+    // (Windows: the handle count of the process moves with Qt and the plugins; leaking the sockets of this section would add more)
+#ifdef _WIN32
+    if (!WaitFor([&]() { return OpenFds() <= BaseFds + 60; }, 3000))
+#else
     if (!WaitFor([&]() { return OpenFds() == BaseFds; }, 3000))
+#endif
     {
+        printf("handles before: %d, now: %d\n", BaseFds, OpenFds());
         printf("descriptors before: %s\nnow: %s\n", BaseTargets.join(" ").toUtf8().constData(), FdTargets().join(" ").toUtf8().constData());
         g_Failures++;
     }
@@ -769,7 +852,7 @@ int main(int argc, char ** argv)
     Input("state.js", QString("pj64.close()"));
     CHECK(WaitFor([]() { return !Running(); }, 15000));
     CHECK(OutputHas("state:STOPPED"));
-    Input("state.js", QString("pj64.open('%1')").arg(Rom));
+    Input("state.js", QString("pj64.open('%1')").arg(QDir::fromNativeSeparators(Rom)));
     CHECK(WaitFor(Running, 30000));
     Pump(800);
     printf("script: pj64.close and pj64.open\n");
@@ -804,7 +887,8 @@ int main(int argc, char ** argv)
     CHECK(g_View->Status()->text().endsWith("(Started)"));
     Stop("log.js");
     printf("script: window lifecycle\n");
-
+    // repeated start/stop
+    const int ThreadsBefore = ScriptShimLiveThreads(); // (on Windows the emulation threads of the running game are part of the process count)
     // repeated start/stop
     WriteScript("quick.js", "script.keepalive(true);\nsetInterval(function () {}, 10);\n");
     for (int i = 0; i < 25; i++)
@@ -827,7 +911,7 @@ int main(int argc, char ** argv)
     }
     CHECK(WaitStatus("quick2.js", CDebuggerUI::ScriptStopped, 8000));
     CHECK(WaitFor([&]() { return !TcpOpen(Port); }, 5000));
-    CHECK(WaitFor([&]() { return ScriptShimLiveThreads() == BaseThreads; }, 5000));
+    CHECK(WaitFor([&]() { return ThreadsBack(ThreadsBefore); }, 5000));
     printf("script: start/stop repeated\n");
 
     // ---- shutdown with everything active: ROM running, callbacks, timers, server, socket,
@@ -841,7 +925,11 @@ int main(int argc, char ** argv)
                         "var s = new Server(); s.listen(%1, '127.0.0.1');\n"
                         "s.on('connection', function (c) { c.on('data', function (d) { c.write(d); }); });\n"
                         "var k = new Socket(); k.connect(%1, '127.0.0.1', function () { k.write('x'); });\n").arg(Port));
+#ifdef _WIN32
+    WriteScript("child.js", "console.log('child start');\nexec('ping -n 4 127.0.0.1 >nul & echo child-done-marker-7193');\nconsole.log('child end');\n");
+#else
     WriteScript("child.js", "console.log('child start');\nexec('sleep 2; echo child-done-marker-7193');\nconsole.log('child end');\n");
+#endif
     WriteScript("alert2.js", "alert('open at shutdown', 'cap');\nconsole.log('alert2 returned');\n");
     Run("busy.js");
     CHECK(OutputHas("busy"));
@@ -851,10 +939,16 @@ int main(int argc, char ** argv)
     // a script in the middle of exec() (the script thread is busy with it until it ends) and
     // then alert(), which keeps the script thread until its box is closed
     // what a shell started in the background (and left behind when the shell ended) is ended too
+#ifdef _WIN32
+#define BACKGROUND_PATTERN "ping +-n 600[1]"
+    WriteScript("background.js", "exec('start /b ping -n 6001 127.0.0.1 >nul 2>&1');\nconsole.log('background started');\n");
+#else
+#define BACKGROUND_PATTERN "sleep 600[1]"
     WriteScript("background.js", "exec('sleep 6001 >/dev/null 2>&1 &');\nconsole.log('background started');\n");
+#endif
     Run("background.js");
     CHECK(OutputHas("background started"));
-    CHECK(ProcessExists("sleep 600[1]"));
+    CHECK(ProcessExists(BACKGROUND_PATTERN));
     Run("child.js");
     CHECK(OutputHas("child start"));
     Pump(300);
@@ -881,10 +975,12 @@ int main(int argc, char ** argv)
     // nothing stays behind: the port, the child process
     CHECK(!TcpOpen(Port));
     CHECK(!ProcessExists("child-done-marker-[7]193"));
-    if (ProcessExists("sleep 600[1]"))
+    if (ProcessExists(BACKGROUND_PATTERN))
     {
         printf("left behind:\n");
+#ifndef _WIN32
         system("ps -eo pid,ppid,pgid,stat,args | grep 'sleep 600[1]'");
+#endif
         g_Failures++;
     }
     // no box of a script is left

@@ -460,6 +460,10 @@ int main(int argc, char ** argv)
         // (POSIX: pthread_exit unwinds the thread, so its destructors run. Windows: FatalError ends the thread with ExitThread, which does
         // not unwind - unwinding through the frames of the recompiler's generated code, which has no unwind information, would end the process)
         CHECK(WaitFor([&]() { return Ended.load(); }, 5000));
+#else
+        // the thread waits for the main thread to show the message box: the event loop must run until the thread has ended
+        // (join() on this thread would deadlock)
+        CHECK(WaitFor([&]() { return WaitForSingleObject((HANDLE)Fatal.native_handle(), 0) == WAIT_OBJECT_0; }, 10000));
 #endif
         Fatal.join();
         CHECK(!After);

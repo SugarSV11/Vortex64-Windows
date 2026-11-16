@@ -26,3 +26,8 @@ Se reintrodujo a propósito el fallo del shim `dirent` (patrón de búsqueda sin
 - No hay pruebas de RDP/vídeo (comparación de imágenes), audio con dispositivo real, mando ni de las ventanas de la GUI (las pruebas Qt de Linux
   dependen de X11/XTest y no se han portado).
 - No hay medición de cobertura.
+
+## Actualización (2026-11-16)
+Con `-DVORTEX_TEST_ROM=<ROM real>` ctest registra además `gui-rombrowser`, `gui-debugger` y `gui-script`, y las pruebas de ventana (`window-lifecycle-test`,
+`window-mainwindow-test`, `ctest -L window`, abren una ventana unos segundos) usan esa ROM. Resultado: 124/124 sin ventana, 5/5 JIT (incluye `jit-fuzz-directed`),
+`lifecycle-test` y `mainwindow-test` PASS. No portados: los tests de X11/XTest/uinput (no aplican a Windows) y los de mando.

@@ -31,6 +31,12 @@ inline int ScriptShimMessageBoxImpl(const char * Text, const char * Caption)
     }
     return 1;
 }
+// Processes started by exec() join a Job Object (KILL_ON_JOB_CLOSE), so ScriptShimTerminateProcesses (and the end
+// of the GUI) ends them together with what they started.
+BOOL ScriptShimCreateProcessImpl(LPCSTR App, LPSTR Cmd, LPSECURITY_ATTRIBUTES PA, LPSECURITY_ATTRIBUTES TA, BOOL Inherit,
+                                 DWORD Flags, LPVOID Env, LPCSTR Dir, LPSTARTUPINFOA SI, LPPROCESS_INFORMATION PI);
+#define CreateProcessA(a, c, pa, ta, i, f, e, d, s, p) ScriptShimCreateProcessImpl((a), (c), (pa), (ta), (i), (f), (e), (d), (s), (p))
+
 #define PostMessage(h, m, w, l) ScriptShimPostMessageImpl((m), (w), (l))
 #define PostMessageA(h, m, w, l) ScriptShimPostMessageImpl((m), (w), (l))
 #define MessageBoxA(h, t, c, f) ScriptShimMessageBoxImpl((t), (c))

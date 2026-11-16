@@ -271,22 +271,25 @@ bool CJSSocketWorker::ProcConnect()
             {
                 rc = 0;
             }
-            else if (errno == EINPROGRESS)
+            else if (WSAGetLastError() == WSAEWOULDBLOCK) // (Windows: not errno/EINPROGRESS)
             {
                 while (!StopRequested())
                 {
-                    fd_set writeFds;
+                    // a refused connection is reported in the exception set on Windows, not as writable
+                    fd_set writeFds, exceptFds;
                     FD_ZERO(&writeFds);
+                    FD_ZERO(&exceptFds);
                     FD_SET(m_Socket, &writeFds);
+                    FD_SET(m_Socket, &exceptFds);
                     TIMEVAL slice;
                     slice.tv_sec = 0;
                     slice.tv_usec = 50000;
-                    const int ready = select(0, nullptr, &writeFds, nullptr, &slice);
+                    const int ready = select(0, nullptr, &writeFds, &exceptFds, &slice);
                     if (ready > 0)
                     {
                         int error = 0;
                         int length = sizeof(error);
-                        if (getsockopt(m_Socket, SOL_SOCKET, SO_ERROR, (char *)&error, &length) == 0 && error == 0)
+                        if (FD_ISSET(m_Socket, &writeFds) && getsockopt(m_Socket, SOL_SOCKET, SO_ERROR, (char *)&error, &length) == 0 && error == 0)
                         {
                             rc = 0;
                         }

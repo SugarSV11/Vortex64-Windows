@@ -68,11 +68,11 @@ void CJSServerWorker::WorkerProc()
         goto stop_cleanup;
     }
 
-    // BSD sockets refuse to bind a port that still has connections in TIME_WAIT (a server that
-    // is restarted, a script that is run again); Winsock does not
+    // Winsock binds a port that still has connections in TIME_WAIT without any option; SO_REUSEADDR here would let
+    // another process take over a port that is in use, so the port is bound exclusively
     {
-        int reuse = 1;
-        setsockopt(m_ServerSocket, SOL_SOCKET, SO_REUSEADDR, (const char *)&reuse, sizeof(reuse));
+        int exclusive = 1;
+        setsockopt(m_ServerSocket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (const char *)&exclusive, sizeof(exclusive));
     }
 
     rc = ioctlsocket(m_ServerSocket, FIONBIO, &nonBlock);

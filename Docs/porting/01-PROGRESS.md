@@ -275,3 +275,20 @@ Fallos reales de la aplicación hallados y corregidos al portar:
 4. En Windows el JIT no era el predeterminado (sí en Linux) -> ahora lo es, igual que en Linux (el fuzz diferencial da 0 diferencias).
 
 Siguen sin portar: `script-test`, `debugger-test`; los de X11/XTest/uinput no aplican a Windows.
+
+## Hito 21: scripts JS con procesos controlados, `script-test` y tests de ventana (2026-11-16)
+- **Job Object para `exec()`** (`ScriptShimWin.cpp`, `script_win_hooks.h`): los procesos que lanzan los scripts entran en un Job Object con
+  `KILL_ON_JOB_CLOSE` (creados suspendidos, asignados y reanudados); `ScriptShimTerminateProcesses` los termina con todo lo que lanzaron. Sustituye al stub.
+- `script-test` portado (Winsock, `GetProcessTimes`, `ping`/`start /b` en vez de `sleep`/`&`, `Get-CimInstance` en vez de `pgrep`) y registrado con `VORTEX_TEST_ROM`: **PASS**.
+  Fallos REALES de la aplicación que encontró:
+  1. `Socket.connect()` (JSSocketWorker): esperaba `errno == EINPROGRESS`, que en Windows no existe (`WSAEWOULDBLOCK`), y no miraba el conjunto de excepciones de `select`
+     (una conexión rechazada no se señala como escribible): ningún cliente TCP de scripts conectaba.
+  2. `exec()` esperaba al EOF de las tuberías: un proceso lanzado en segundo plano (`start /b ...`) hereda la tubería y bloqueaba el script hasta que terminara. Ahora se lee
+     mientras la shell vive y se termina cuando la shell acabó y las tuberías están vacías (stdout y stderr juntos).
+  3. `Server.listen` usaba `SO_REUSEADDR`, que en Winsock permite robar un puerto en uso; ahora `SO_EXCLUSIVEADDRUSE`.
+- `mainwindow-test` (ventana real, ROM real): **PASS**. Fallo de la propia prueba: `Fatal.join()` bloqueaba el hilo de la GUI mientras `FatalError` esperaba para mostrar su aviso (interbloqueo);
+  ahora se procesan eventos hasta que el hilo termina. `lifecycle-test`: **PASS** con ROM real (con la ROM falsa de ceros se cuelga, como es de esperar). Las pruebas de ventana usan la ROM real si hay `VORTEX_TEST_ROM`.
+- Limitaciones de `script-test` en Windows: no hay contador de hilos/descriptores del motor de scripts, así que las comprobaciones de fugas usan los hilos y manejadores del proceso con margen
+  (6 hilos, 60 manejadores): son una guarda gruesa, no exacta.
+- Resultado (Release): `ctest -LE window -E directed` 124/124 (incluye `gui-script` y `gui-debugger` con ROM real); `jit-fuzz-directed` y 4 `jit-fuzz` PASS (5/5);
+  `lifecycle-test` y `mainwindow-test` PASS ejecutados directamente con SM64. Mando: no portado a prueba (decisión del usuario).

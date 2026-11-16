@@ -29,7 +29,7 @@ Leyenda: ✅ verificado en Windows (con la prueba indicada) · 🟡 compila/abre
 | GUI: Trucos | ✅ (abre) | diálogo "Trucos" (Ctrl+C) abre; aplicar un truco no probado |
 | GUI: Mejoras | 🟡 | entrada de menú presente; sin abrir |
 | Depurador (ventanas) | ✅ (abre) | tras activarlo en Avanzado abre "Vortex64 - Debugger"; sin usarlo con un juego |
-| Scripts JS del depurador | 🟡 | compila; `exec()` no termina procesos al cerrar (stub) |
+| Scripts JS del depurador | ✅ | `script-test` PASS con ROM real (fs, exec, sockets, timers, alertas, callbacks de CPU, ciclos de ROM, apagado con todo activo); `exec()` ahora termina sus procesos con un Job Object |
 | Discord Rich Presence | 🟡 | compila con sus ficheros Windows; sin Discord para probar |
 | Inhibir suspensión (SetThreadExecutionState) | 🟡 | implementado, sin comprobar con el sistema |
 | Pantalla completa | ✅ | menú Ver > Pantalla completa: la ventana pasa a 1920x1080 en 0,0 (= monitor); Escape (dos veces: la primera cierra un aviso) vuelve a 656x589 |
