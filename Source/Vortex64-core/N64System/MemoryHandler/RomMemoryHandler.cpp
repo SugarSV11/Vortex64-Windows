@@ -48,7 +48,7 @@ bool RomMemoryHandler::Read32(uint32_t Address, uint32_t & Value)
     }
     else if ((Address & 0x1FFFFF00) == 0x1FB00000)
     {
-        // Vortex64 1.1: the signature that SM64 Living ROM reads at boot. 64 words past any real cartridge (where a
+        // Vortex64 1.1: the signature that Every Copy Is Personalized (SM64 hack) reads at boot. 64 words past any real cartridge (where a
         // console or any other emulator answers the open-bus pattern below); without it the ROM does not start (it runs only in Vortex64).
         uint32_t x = (Address & 0x1FFFFFFC) * 0x9E3779B1u;
         x ^= x >> 15;

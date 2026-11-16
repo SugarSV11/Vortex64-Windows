@@ -38,7 +38,7 @@ Este repositorio lo lleva a Windows con **MSVC x64, CMake, vcpkg y Qt 6**, sin W
 - **Sin ventana de CMD**: `vortex64.exe` es ahora una aplicación de Windows.
 - **GLideN64 siempre en la lista** de plugins de vídeo (la compilación lo deja junto al `.exe`).
 - **Teclas con su nombre real** en la configuración de controles (antes W salía como "8", A como "U"...). Las teclas guardadas con la 1.0 se corrigen solas la primera vez.
-- **SM64 Living ROM** ([hack beta](https://github.com/SugarSV11/SM64-Living-ROM)): Vortex64 ya la reconoce y la abre sin configurar nada (EEPROM de 16 Kbit). Ese hack solo funciona en Vortex64.
+- **Every Copy Is Personalized** ([hack beta de SM64](https://github.com/SugarSV11/Every-Copy-Is-Personalized)): Vortex64 ya la reconoce y la abre sin configurar nada (EEPROM de 16 Kbit). Ese hack solo funciona en Vortex64.
 
 ## 🚀 Instalación
 
