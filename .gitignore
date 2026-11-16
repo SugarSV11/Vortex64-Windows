@@ -153,3 +153,4 @@ build*/
 /build/
 /dist/
 /vcpkg_installed/
+/third_party_bin/

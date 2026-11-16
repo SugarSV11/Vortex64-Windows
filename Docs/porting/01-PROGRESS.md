@@ -252,3 +252,13 @@ Infraestructura: `Source/Common/Windows/compat/crash_report.h` (pila simbolizada
 NO portados (dependen de POSIX/X11/hardware o del módulo Qt Test): `mainwindow-test` (socket Unix de Discord), `lifecycle-test` (symlink), `first-run-test` y
 `migration-test` (HOME/XDG, fork), `audio-test` (dlopen NOLOAD), `script-test` (ScriptShim POSIX), `input-e2e/-capture-x11/-ingame/hotkey-pause/-gamepad` (X11/XTest/uinput),
 `present-sync-test` (X), `gliden64-test`; `rombrowser-test` y `mainmenu-test` necesitan `qtbase[testlib]` (no instalado), `debugger-test` necesita una ROM real.
+
+## Hito 19: GLideN64 mediante el binario oficial (2026-11-15)
+Idea del usuario: reutilizar el GLideN64 que lleva Project64 en vez de portar su código. Se usó la build oficial del propio proyecto
+(`gonetz/GLideN64`, release `github-actions`, `GLideN64-a04081a-Windows-PJ64Legacy-WTL-x64.zip`, 1,7 MB, SHA-256 c3f4a9a6...39d1f9), no la de Project64.
+- La DLL es x64 y exporta toda la interfaz Zilmar de vídeo que exige el núcleo (InitiateGFX, ProcessDList, UpdateScreen, ChangeWindow, ViStatusChanged...).
+- GUI con perfil aislado y `Graphics Dll=GLideN64.dll`: barra de estado "GLideN64 rev.a04081a", título de SM64 renderizado. En la CLI se cae en el primer `UpdateScreen`
+  porque no hay `HWND` (GLideN64 crea su contexto WGL sobre la ventana que le da el emulador).
+- ZIP portable con GLideN64 (38,2 MB): perfil nuevo -> la GUI lo selecciona sola.
+- Licencia: GPL-2.0-or-later; el binario NO está en el repositorio (`third_party_bin/` ignorado); el ZIP lleva `GLideN64-SOURCE.txt` con el enlace al código (commit a04081a).
+- Sin verificar: diálogo de configuración propio del plugin, otros juegos, rendimiento, pantalla completa con GLideN64.

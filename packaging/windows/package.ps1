@@ -36,6 +36,16 @@ if (Test-Path $vswhere) {
 }
 if ($crt) { Get-ChildItem $crt.FullName -Filter *.dll | Copy-Item -Destination $stage } else { Write-Warning "MSVC runtime not found; the target PC needs the VC++ 2015-2022 x64 redistributable." }
 
+# GLideN64 (official upstream build, fetched by fetch-gliden64.ps1; GPL-2.0-or-later: licence and source pointer travel with it)
+$gl = Join-Path $root "third_party_bin/GLideN64"
+if (Test-Path (Join-Path $gl "GLideN64.dll")) {
+    Copy-Item (Join-Path $gl "GLideN64.dll") $stage
+    Copy-Item (Join-Path $gl "GLideN64.custom.ini") $stage -ErrorAction SilentlyContinue
+    if (Test-Path (Join-Path $gl "translations")) { Copy-Item (Join-Path $gl "translations") (Join-Path $stage "translations") -Recurse }
+    Copy-Item (Join-Path $gl "SOURCE.txt") (Join-Path $stage "GLideN64-SOURCE.txt") -ErrorAction SilentlyContinue
+    Write-Host "GLideN64 included"
+} else { Write-Host "GLideN64 not included (run packaging/windows/fetch-gliden64.ps1 first to include it)" }
+
 # licences (GPLv2 requires them to travel with the binaries)
 foreach ($f in "LICENSE", "THIRD_PARTY_NOTICES.md", "README.md") { Copy-Item (Join-Path $root $f) $stage }
 Copy-Item (Join-Path $root "licenses") (Join-Path $stage "licenses") -Recurse

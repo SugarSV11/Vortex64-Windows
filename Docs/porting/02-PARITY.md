@@ -10,7 +10,7 @@ Leyenda: ✅ verificado en Windows (con la prueba indicada) · 🟡 compila/abre
 | RSP (interpreter, plugin DLL) | ✅ | `rsp-test` (escalares, vectoriales VADD/VAND/VMULF, BREAK) y SM64 |
 | RSP recompilador | 🟡 | sin prueba diferencial |
 | Vídeo propio (OpenGL/SDL2) | ✅ | SM64 embebido en la ventana Qt; sin comparación de imágenes |
-| GLideN64 (plugin alternativo) | ❌ | requiere portar su capa de plataforma (7 ficheros Linux), FreeType, su UI Qt y 535 ficheros; no iniciado |
+| GLideN64 (plugin alternativo) | ✅ (binario oficial) | NO se porta su código: se usa el binario Windows x64 oficial de gonetz/GLideN64 (build a04081a, formato PJ64Legacy), descargado y verificado por SHA-256 con `packaging/windows/fetch-gliden64.ps1`. Verificado: carga como plugin, SM64 se renderiza en la ventana de la GUI y un perfil nuevo lo elige solo (FirstRun). Sin verificar: su diálogo de configuración, otros juegos, rendimiento; en la CLI no funciona (necesita HWND, la CLI no tiene ventana) |
 | Audio (SDL2) | ✅ (señal) | el medidor de pico de Windows marca señal; calidad/latencia no medidas |
 | Audio DirectSound | 🟡 | el backend original existe en el código, no integrado |
 | Entrada: teclado | ✅ | Enter (Start) lleva de título a "SELECT FILE" |

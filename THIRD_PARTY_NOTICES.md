@@ -23,3 +23,8 @@
 
 ## Licencias Dudosas o Incompatibles
 - Ninguno encontrado. Todos los componentes incluidos o enlazados tienen licencias identificadas, verificadas y compatibles (GPLv2, zlib, MIT, BSD, Public Domain y LGPLv3 para Qt6 enlazado dinámicamente).
+
+## GLideN64 binary (Windows package only)
+The Windows portable package may include the official `GLideN64.dll` (build a04081a, Windows x64, Project64 plugin format) downloaded by
+`packaging/windows/fetch-gliden64.ps1` from https://github.com/gonetz/GLideN64 and verified by SHA-256. It is distributed unmodified under
+GPL-2.0-or-later; its source code is at https://github.com/gonetz/GLideN64/tree/a04081a. See `licenses/GLideN64.txt`.
