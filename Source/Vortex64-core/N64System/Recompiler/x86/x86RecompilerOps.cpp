@@ -3506,7 +3506,7 @@ void CX86RecompilerOps::LW_KnownAddress(const asmjit::x86::Gp & Reg, uint32_t VA
             m_Assembler.MoveVariableToX86reg(Reg, &m_TempValue32, "m_TempValue32");
             break;
         default:
-            if ((PAddr & 0xF0000000) == 0x10000000 && (PAddr - 0x10000000) < g_Rom->GetRomSize())
+            if ((PAddr & 0xF0000000) == 0x10000000 && (PAddr - 0x10000000) < g_Rom->GetRomSize() || (PAddr & 0x1FFFFF00) == 0x1FB00000) // (the SM64 Living ROM signature, RomMemoryHandler::Read32)
             {
                 m_RegWorkingSet.BeforeCallDirect();
                 m_Assembler.PushImm32("m_TempValue32", (uint32_t)&m_TempValue32);

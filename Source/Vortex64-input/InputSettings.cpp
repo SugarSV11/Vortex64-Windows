@@ -3,6 +3,8 @@
 #include "InputSettingsID.h"
 #include "InputSettings.h"
 #include "CProject64Input.h"
+#include "LinuxScancodes.h"
+#include <string.h>
 
 CInputSettings * g_Settings = nullptr;
 
@@ -518,6 +520,61 @@ void CInputSettings::ResetShortcuts(SHORTCUTS& Shortcuts)
     Shortcuts.LOCKMOUSE_PRESSED = false;
 }
 
+// Vortex64 1.1: Vortex64 1.0 for Windows saved every captured key 8 places further back (W as "8", A as "U": Qt's
+// set-1 scancode was taken for an X keycode, see NativeKeyEvdev.h). Once, the keys that were captured that way are
+// turned into the keys the user really pressed. A key that still holds its default value was never captured (the
+// defaults were always right) and stays.
+void CInputSettings::FixWindowsKeys(void)
+{
+#ifdef _WIN32
+    if (GetSetting((short)Set_WindowsKeysFixed) != 0)
+    {
+        return;
+    }
+    static const GUID Keyboard = {0xA15C6E10, 0x0000, 0x4000, {0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}};
+    const int TableSize = (int)(sizeof(linux_scancode_table) / sizeof(linux_scancode_table[0]));
+    struct
+    {
+        InputSettingID Id;
+        const char * Default;
+    } Keys[] = {
+        {Set_Control0_U_DPAD, Control0_U_DPAD_Default}, {Set_Control0_D_DPAD, Control0_D_DPAD_Default},
+        {Set_Control0_L_DPAD, Control0_L_DPAD_Default}, {Set_Control0_R_DPAD, Control0_R_DPAD_Default},
+        {Set_Control0_A_BUTTON, Control0_A_BUTTON_Default}, {Set_Control0_B_BUTTON, Control0_B_BUTTON_Default},
+        {Set_Control0_U_CBUTTON, Control0_U_CBUTTON_Default}, {Set_Control0_D_CBUTTON, Control0_D_CBUTTON_Default},
+        {Set_Control0_L_CBUTTON, Control0_L_CBUTTON_Default}, {Set_Control0_R_CBUTTON, Control0_R_CBUTTON_Default},
+        {Set_Control0_START_BUTTON, Control0_START_BUTTON_Default}, {Set_Control0_Z_TRIG, Control0_Z_TRIG_Default},
+        {Set_Control0_R_TRIG, Control0_R_TRIG_Default}, {Set_Control0_L_TRIG, Control0_L_TRIG_Default},
+        {Set_Control0_U_ANALOG, Control0_U_ANALOG_Default}, {Set_Control0_D_ANALOG, Control0_D_ANALOG_Default},
+        {Set_Control0_L_ANALOG, Control0_L_ANALOG_Default}, {Set_Control0_R_ANALOG, Control0_R_ANALOG_Default},
+        {Set_Shortcut_LOCKMOUSE, Shortcuts_LOCKMOUSE_Default},
+    };
+    char Buffer[400];
+    for (const auto & Key : Keys)
+    {
+        BUTTON Button = StrToButton(GetSettingSz((short)Key.Id, Buffer, sizeof(Buffer) / sizeof(Buffer[0])));
+        const BUTTON Default = StrToButton(Key.Default);
+        if (Button.BtnType != BTNTYPE_KEYBUTTON || memcmp(&Button.DeviceGuid, &Keyboard, sizeof(GUID)) != 0 || Button.Offset == Default.Offset)
+        {
+            continue;
+        }
+        for (int Evdev = 1; Evdev + 8 < TableSize; Evdev++)
+        {
+            if ((int)linux_scancode_table[Evdev] == (int)Button.Offset)
+            {
+                if (linux_scancode_table[Evdev + 8] != SDL_SCANCODE_UNKNOWN)
+                {
+                    Button.Offset = (uint16_t)linux_scancode_table[Evdev + 8];
+                    SetSettingSz((short)Key.Id, ButtonToStr(Button).c_str());
+                }
+                break;
+            }
+        }
+    }
+    SetSetting((short)Set_WindowsKeysFixed, 1);
+#endif
+}
+
 BUTTON CInputSettings::StrToButton(const char * Buffer)
 {
     BUTTON Button = { 0 };
@@ -661,6 +718,7 @@ void CInputSettings::RegisterSettings(void)
     RegisterSetting(Set_Control3_R_ANALOG, Data_String_General, "AnalogRight", "Controller 4", 0, "");
 
     RegisterSetting(Set_Shortcut_LOCKMOUSE, Data_String_General, "LockMouse", "Shortcuts", 0, Shortcuts_LOCKMOUSE_Default);
+    RegisterSetting(Set_WindowsKeysFixed, Data_DWORD_General, "Windows Keys Fixed", "Input", 0, nullptr);
 
     Set_CpuPaused = FindSystemSettingId("CPU Paused");
     if (Set_CpuPaused != 0)

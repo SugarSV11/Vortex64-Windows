@@ -56,6 +56,7 @@ void CProject64Input::InitiateControllers(CONTROL_INFO * ControlInfo)
     }
     m_Input->Initiate(ControlInfo);
     m_iFirstController = -1;
+    g_Settings->FixWindowsKeys(); // (once: the keys that Vortex64 1.0 for Windows saved 8 places back)
     for (uint32_t i = 0, n = sizeof(m_Controllers) / sizeof(m_Controllers[0]); i < n; i++)
     {
         g_Settings->LoadController(i, m_ControlInfo.Controls[i], m_Controllers[i]);

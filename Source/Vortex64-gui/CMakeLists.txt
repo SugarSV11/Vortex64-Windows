@@ -121,6 +121,11 @@ set_target_properties(vortex64 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     OUTPUT_NAME vortex64
 )
+# Vortex64 1.1: a Windows (GUI) application, not a console one: no black CMD window opens with it
+# (Qt6::EntryPoint gives it its WinMain)
+if(WIN32)
+    set_target_properties(vortex64 PROPERTIES WIN32_EXECUTABLE ON)
+endif()
 
 
 # Test region: on Windows the tests that need X11/XTest/uinput/DBus, the Qt Test module or GLideN64 are not built (see Docs/porting/02-PARITY.md)

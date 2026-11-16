@@ -11759,3 +11759,13 @@ Internal Name=SUPERMARIO64
 Status=Compatible
 Culling=1
 RDRAM Size=8
+
+//---- SM64 Living ROM (applied .bps), built in: 16 Kbit EEPROM, nothing to set up ----
+[D7176C43-E4CF3D8C-C:45]
+Good Name=Super Mario 64 Living ROM (U)
+Internal Name=SUPER MARIO 64
+Status=Compatible
+32bit=1
+Culling=1
+RDRAM Size=8
+Save Type=16kbit Eeprom

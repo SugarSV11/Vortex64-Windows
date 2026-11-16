@@ -107,4 +107,5 @@ enum InputSettingID
     Set_Control3_R_ANALOG,
 
     Set_Shortcut_LOCKMOUSE,
+    Set_WindowsKeysFixed,
 };

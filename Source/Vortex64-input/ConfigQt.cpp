@@ -26,6 +26,7 @@
 #include <Vortex64-plugin-spec/Input.h>
 #include <SDL2/SDL_scancode.h>
 #include "LinuxScancodes.h"
+#include "NativeKeyEvdev.h"
 
 #include <QApplication>
 #include <QIcon>
@@ -109,11 +110,12 @@ bool IsEmptyButton(const BUTTON & Button)
 // both sides agree for every key of the keyboard whatever the layout.
 int SdlScancodeFromNative(quint32 NativeScanCode)
 {
-    if (NativeScanCode < 8)
+    const int Code = VortexNativeKeyToEvdev(NativeScanCode); // (Windows: the set-1 scancode, see NativeKeyEvdev.h)
+    if (Code <= 0)
     {
         return 0;
     }
-    const quint32 Evdev = NativeScanCode - 8;
+    const quint32 Evdev = (quint32)Code;
     if (Evdev < sizeof(linux_scancode_table) / sizeof(linux_scancode_table[0]))
     {
         return (int)linux_scancode_table[Evdev];

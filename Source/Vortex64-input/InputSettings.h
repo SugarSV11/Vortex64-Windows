@@ -19,6 +19,7 @@ public:
     void LoadShortcuts(SHORTCUTS& Shortcuts);
     void SaveShortcuts(SHORTCUTS& Shortcuts);
     void ResetShortcuts(SHORTCUTS& Shortcuts);
+    void FixWindowsKeys(void);
 
 private:
     CInputSettings(const CInputSettings&);

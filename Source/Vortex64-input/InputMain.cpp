@@ -277,6 +277,7 @@ EXPORT void CALL WM_KillFocus(uint32_t /*wParam*/, uint32_t /*lParam*/)
 EXPORT void CALL PluginLoaded(void)
 {
     SetupInputSettings();
+    g_Settings->FixWindowsKeys(); // (once, before anything reads or shows the keys)
     // There is no DllMain/DLL_PROCESS_ATTACH on Linux to construct the
     // plugin object, so do it lazily here instead (mirrors AudioMain's
     // PluginInit() pattern). hinst is unused off Windows.

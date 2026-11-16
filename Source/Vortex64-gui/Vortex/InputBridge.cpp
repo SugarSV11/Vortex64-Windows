@@ -6,6 +6,7 @@
 #include <Vortex64-core/Plugins/ControllerPlugin.h>
 #include <Vortex64-core/Plugins/Plugin.h>
 #include <Vortex64-core/Settings.h>
+#include <Vortex64-input/NativeKeyEvdev.h>
 
 #include <QAbstractSpinBox>
 #include <QApplication>
@@ -181,7 +182,7 @@ bool InputBridge::eventFilter(QObject * Watched, QEvent * Event)
     {
         const QKeyEvent * Key = static_cast<QKeyEvent *>(Event);
         // (the code of the key of the X server is the evdev one plus 8; an event that is a repetition changes nothing)
-        const int Code = (int)Key->nativeScanCode() - 8;
+        const int Code = VortexNativeKeyToEvdev(Key->nativeScanCode()); // (Windows: set-1 scancode, see NativeKeyEvdev.h)
         if (Event->type() == QEvent::ShortcutOverride)
         {
             // One key, one action. A key that is a button of the pad is the game's: accepting the override makes Qt deliver the key as a

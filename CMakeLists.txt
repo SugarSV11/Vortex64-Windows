@@ -68,6 +68,14 @@ add_subdirectory(Source/Vortex64-input)
 
 # GLideN64 as an alternative video plugin (the submodule is not modified, see Source/GLideN64-linux)
 option(PJ64_GLIDEN64 "Build GLideN64 as a video plugin" ON)
+# Vortex64 1.1: on Windows GLideN64 is the official upstream build (third_party_bin/GLideN64); it is copied next to
+# vortex64.exe so the graphics plugin list offers it (the build folder never had it, only the packaged ZIP)
+if(WIN32 AND EXISTS ${CMAKE_SOURCE_DIR}/third_party_bin/GLideN64/GLideN64.dll)
+    add_custom_target(copy-gliden64 ALL
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/bin
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/third_party_bin/GLideN64/GLideN64.dll ${CMAKE_SOURCE_DIR}/third_party_bin/GLideN64/GLideN64.custom.ini ${CMAKE_BINARY_DIR}/bin/
+        COMMENT "Copying GLideN64 next to vortex64.exe")
+endif()
 if(PJ64_GLIDEN64 AND NOT WIN32 AND EXISTS ${CMAKE_SOURCE_DIR}/Source/GLideN64/Source/src/Config.cpp)
     add_subdirectory(Source/GLideN64-linux)
 endif()
