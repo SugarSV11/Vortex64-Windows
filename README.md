@@ -17,9 +17,8 @@
 
 ## ✨ ¿Qué es?
 
-**Vortex64-Windows** es el port a **Windows** de [Vortex64](https://github.com/SugarSV11/Vortex64), un emulador de N64 derivado del núcleo de
-[Project64](https://github.com/project64/project64). La versión original es solo para Linux; este repositorio la lleva a Windows con
-**MSVC x64, CMake, vcpkg y Qt 6**, sin Wine ni capas de compatibilidad: es un ejecutable nativo.
+**Vortex64-Windows** es el port a **Windows** de [Vortex64](https://github.com/SugarSV11/Vortex64), un emulador de Nintendo 64 creado por **SugarSV11** para Linux.
+Este repositorio lo lleva a Windows con **MSVC x64, CMake, vcpkg y Qt 6**, sin Wine ni capas de compatibilidad: es un ejecutable nativo.
 
 > Necesitas tus **propias ROMs**. Este proyecto no incluye ni distribuye ninguna ROM ni contenido de Nintendo.
 
@@ -75,13 +74,13 @@ ROMs `.7z`, pantallas de DPI alto. No hay instalador (solo ZIP portable). El det
 
 ## 📜 Licencia y créditos
 
-Software libre bajo la **GNU GPL v2** ([`LICENSE`](LICENSE)). Basado en **Project64** y en el Vortex64 original para Linux; usa GLideN64, AsmJit,
+Software libre bajo la **GNU GPL v2** ([`LICENSE`](LICENSE)). Port del Vortex64 original para Linux, de SugarSV11. Los ficheros que conservan cabeceras de copyright de terceros mantienen sus avisos (la GPL lo exige); usa GLideN64, AsmJit,
 SDL2, Duktape, Discord RPC, 7-Zip C SDK, zlib/minizip, Berkeley SoftFloat y Qt 6. Atribución completa en
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) y [`licenses/`](licenses/). El README de la versión Linux original está en
 [`Docs/README-LINUX-ORIGINAL.md`](Docs/README-LINUX-ORIGINAL.md).
-Nintendo 64 es marca de Nintendo; este proyecto no está afiliado a Nintendo ni a Project64.
+Nintendo 64 es marca de Nintendo; este proyecto no está afiliado a Nintendo.
 
 ---
 
-<sub>**English:** Vortex64-Windows is the native Windows (x64, MSVC, Qt 6) port of the Vortex64 N64 emulator (Project64 core, x64 JIT recompiler, SDL2/OpenGL,
+<sub>**English:** Vortex64-Windows is the native Windows (x64, MSVC, Qt 6) port of the Vortex64 N64 emulator by SugarSV11 (x64 JIT recompiler, SDL2/OpenGL,
 GLideN64 bundled). Download the portable ZIP from Releases, extract and run `vortex64.exe`; bring your own ROMs. GPLv2.</sub>
