@@ -25,18 +25,18 @@ Leyenda: ✅ verificado en Windows (con la prueba indicada) · 🟡 compila/abre
 | GUI: biblioteca de juegos | ✅ | escanea carpeta, muestra tarjeta, "Iniciar" arranca |
 | GUI: menús, barra de estado | ✅ | capturas; VI/s y CPU en la barra |
 | GUI: Ajustes (todas las páginas) | ✅ (abren) | no se probó que cada cambio se aplique y persista |
-| GUI: configuración de plugins (vídeo/audio/input) | ✅ | las tres ventanas abren y se pintan |
+| GUI: configuración de plugins (vídeo/audio/input) | ✅ | `plugin-config-test` write/read de los tres; bug de Aplicar (ajustes no compartidos con la DLL del plugin) corregido |
 | GUI: Trucos | ✅ (abre) | diálogo "Trucos" (Ctrl+C) abre; aplicar un truco no probado |
 | GUI: Mejoras | 🟡 | entrada de menú presente; sin abrir |
 | Depurador (ventanas) | ✅ (abre) | tras activarlo en Avanzado abre "Vortex64 - Debugger"; sin usarlo con un juego |
 | Scripts JS del depurador | 🟡 | compila; `exec()` no termina procesos al cerrar (stub) |
 | Discord Rich Presence | 🟡 | compila con sus ficheros Windows; sin Discord para probar |
 | Inhibir suspensión (SetThreadExecutionState) | 🟡 | implementado, sin comprobar con el sistema |
-| Pantalla completa | 🟡 | sin probar |
-| "Siempre encima" | 🟡 | implementado (SetWindowPos), sin probar |
+| Pantalla completa | ✅ | menú Ver > Pantalla completa: la ventana pasa a 1920x1080 en 0,0 (= monitor); Escape (dos veces: la primera cierra un aviso) vuelve a 656x589 |
+| "Siempre visible" (siempre encima) | ✅ | menú Ver: el estilo WS_EX_TOPMOST pasa de False a True |
 | Instancia única | ✅ | `instance-test` con procesos reales (detecta, termina, sin restos) |
 | CLI | ✅ | arranque, `--interpreter/--recompiler/--unlimited/--perf/--profile` |
-| Tests automáticos | ✅ (parcial) | 10 pruebas ctest + suite dirigida del JIT; ~25 tests Linux de la GUI (X11/XTest) sin portar |
+| Tests automáticos | ✅ (parcial) | 88 pruebas ctest (10 núcleo/JIT/RSP/CLI/instancia + 78 de la GUI) + suite dirigida del JIT; 8 tests de la GUI de Linux sin portar (POSIX/X11/hardware) y 2 que necesitan el módulo Qt Test |
 | Empaquetado | ✅ (ZIP portable) | ZIP 27,8 MB probado en carpeta limpia; sin instalador ni asociación de archivos |
 | CI GitHub Actions | 🟡 | escrita, nunca ejecutada (no hay repositorio remoto) |
 | Linux sigue compilando | 🟡 | los cambios de código compartido llevan `#ifdef _WIN32`; no se compiló en Linux |
