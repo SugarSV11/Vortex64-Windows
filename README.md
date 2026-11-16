@@ -1,118 +1,87 @@
-> **Vortex64-Windows** es el port a Windows (x64, MSVC) de Vortex64. Estado actual: línea de comandos + plugins; SM64 (USA) corre con intérprete y JIT, con vídeo, audio y teclado verificados; **sin GUI todavía**. Detalles en [`Docs/porting/01-PROGRESS.md`](Docs/porting/01-PROGRESS.md) y cómo compilar en [`Docs/development/BUILD-WINDOWS.md`](Docs/development/BUILD-WINDOWS.md). Las instrucciones de abajo son las del proyecto original para Linux.
+<div align="center">
 
-# Vortex64
+# 🌀 Vortex64 for Windows
 
-**Emulador de Nintendo 64 nativo para Linux** · *Native Nintendo 64 emulator for Linux*
+**Emulador de Nintendo 64 nativo para Windows 10/11 (x64)** · *Native Nintendo 64 emulator for Windows*
 
-Vortex64 es un emulador de N64 para Linux, derivado del núcleo de [Project64](https://github.com/project64/project64)
-(núcleo, RSP, recompilador) con interfaz Qt6 y backends SDL2/OpenGL. Es un binario ELF:
-**sin Wine, sin Proton**.
+![Plataforma](https://img.shields.io/badge/plataforma-Windows%2010%20%7C%2011%20x64-0078D4?logo=windows&logoColor=white)
+![Compilador](https://img.shields.io/badge/MSVC-C%2B%2B17-5C2D91)
+![GUI](https://img.shields.io/badge/GUI-Qt%206-41CD52?logo=qt&logoColor=white)
+![Licencia](https://img.shields.io/badge/licencia-GPL--2.0-blue)
 
-> **Versión 1.0.0.** Si encuentras un fallo, abre un
-> [issue](https://github.com/SugarSV11/Vortex64/issues) con tu sistema, la versión y los pasos para reproducirlo.
-> La compatibilidad varía según el juego: consulta [Limitaciones conocidas](#limitaciones-conocidas).
+[**⬇ Descargar**](../../releases/latest) · [Compilar](Docs/development/BUILD-WINDOWS.md) · [Estado del port](Docs/porting/01-PROGRESS.md) · [Paridad con Linux](Docs/porting/02-PARITY.md)
 
-![Biblioteca de Vortex64](Docs/img/library.png)
-<sub>Biblioteca con ROMs de prueba falsas (sin contenido de Nintendo).</sub>
+</div>
 
-## Características
+---
 
-- Núcleo MIPS R4300i (intérprete y recompilador x86-64), RSP, TLB y saves
-- Video OpenGL con SDL2, embebido en la ventana principal (plugin propio y GLideN64 opcional)
-- Audio SDL2 / PipeWire y entrada por teclado, ratón y mandos (SDL2)
-- Interfaz Qt6: navegador de ROMs, favoritos, ajustes, trucos y mejoras, save states
-- Depurador con ventanas y scripts JavaScript
-- Soporte de ROMs `.z64`, `.n64`, `.v64` (también dentro de `.zip` y `.7z`)
-- Integración de escritorio: icono, entrada `.desktop` y asociación MIME
+## ✨ ¿Qué es?
 
-## Descargar y ejecutar
+**Vortex64-Windows** es el port a **Windows** de [Vortex64](https://github.com/SugarSV11/Vortex64), un emulador de N64 derivado del núcleo de
+[Project64](https://github.com/project64/project64). La versión original es solo para Linux; este repositorio la lleva a Windows con
+**MSVC x64, CMake, vcpkg y Qt 6**, sin Wine ni capas de compatibilidad: es un ejecutable nativo.
 
-1. Descarga `Vortex64-x86_64.AppImage` desde [Releases](https://github.com/SugarSV11/Vortex64/releases).
-2. Ejecútalo:
+> Necesitas tus **propias ROMs**. Este proyecto no incluye ni distribuye ninguna ROM ni contenido de Nintendo.
 
-```bash
-chmod +x Vortex64-x86_64.AppImage
-./Vortex64-x86_64.AppImage
+## 🎮 Características
+
+- **Núcleo MIPS R4300i** con intérprete y **recompilador JIT x64** (verificado contra el intérprete con miles de programas aleatorios: 0 diferencias)
+- **RSP** y TLB, guardados (EEPROM/SRAM/Flash) y **save states**
+- **Vídeo**: plugin propio OpenGL/SDL2 embebido en la ventana, y **GLideN64** (binario oficial) incluido en el paquete
+- **Audio** SDL2 y **entrada** por teclado y mando (SDL2)
+- **Interfaz Qt 6**: biblioteca de ROMs, favoritos, ajustes, trucos y mejoras, pantalla completa, "siempre visible", instancia única
+- **Depurador** con ventanas y **scripts JavaScript** (sistema de archivos, procesos, sockets, temporizadores)
+- ROMs `.z64`, `.n64`, `.v64`, y dentro de `.zip` / `.7z`
+- Interfaz en español e inglés
+
+## 🚀 Instalación
+
+1. Descarga **`Vortex64-Windows-x64.zip`** desde [Releases](../../releases/latest).
+2. Descomprímelo donde quieras (es portable; incluye el runtime de Visual C++, no hay que instalar nada).
+3. Ejecuta **`vortex64.exe`**.
+
+También hay una versión de línea de comandos:
+
+```powershell
+vortex64-cli.exe "C:\ruta\juego.z64" --recompiler   # o --interpreter
 ```
 
-Necesitas tus **propias ROMs**. Este proyecto no incluye ni distribuye ninguna ROM ni contenido de Nintendo.
+Tus ajustes y partidas se guardan en `%APPDATA%\vortex64` y `%LOCALAPPDATA%\vortex64`.
 
-## Compilar desde el código
+## 🛠 Compilar desde el código
 
-Dependencias (nombres de Fedora; en otras distros usa los equivalentes `-dev`):
-`gcc`/`g++` ≥ 13, `cmake` ≥ 3.16, `ninja-build`, `pkgconf`, `SDL2-devel`, `qt6-qtbase-devel`,
-`mesa-libGL-devel`, `pipewire-devel`, `alsa-lib-devel`, `freetype-devel`, `zlib-ng-devel`.
+Requisitos: Visual Studio 2022 Build Tools (MSVC 14.4x + Windows SDK), CMake, Ninja y [vcpkg](https://github.com/microsoft/vcpkg).
 
-```bash
-git clone https://github.com/SugarSV11/Vortex64.git
-cd Vortex64
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-./build/bin/vortex64
+```bat
+set VCPKG_ROOT=C:\ruta\a\vcpkg
+cmake --preset windows-msvc-release -DVORTEX_BUILD_GUI=ON -DVCPKG_MANIFEST_FEATURES=gui
+cmake --build --preset windows-msvc-release
 ```
 
-- `-DPJ64_GLIDEN64=OFF` desactiva el plugin de video alternativo GLideN64 (no necesita FreeType).
-- Instalación del sistema: `cmake --install build --prefix ~/.local`.
-- Detalles del port, pruebas y estado por componente: [`Docs/dev/`](Docs/dev/).
+Detalles en [`Docs/development/BUILD-WINDOWS.md`](Docs/development/BUILD-WINDOWS.md). Para generar el ZIP portable:
+`powershell -File packaging\windows\package.ps1 -Version 1.0.0`.
 
-## Tests
+## ✅ Pruebas
 
-```bash
-cmake --build build --target check   # compila los tests
-ctest --test-dir build --output-on-failure
-```
+Más de 120 pruebas automáticas (núcleo, RSP, CLI, recompilador contra intérprete, GUI, ajustes, plugins, scripts JS, ventana principal),
+todas pasando en Windows. Ver [`Docs/development/TESTING.md`](Docs/development/TESTING.md).
 
-La suite se ejecuta sin pantalla (Qt offscreen), con ROMs falsas de solo cabecera: menús, navegador de ROMs,
-ajustes, configuración de plugins, entrada, carga de plugins, migración desde Project64 y primer arranque.
-Los tests que necesitan pantalla real, mando o una ROM comercial están en `Scripts/linux/`
-(`run-gui-tests.sh`, `input-gamepad-test`).
+## 📊 Estado honesto
 
-## AppImage portable
+Verificado con Super Mario 64 (USA): título, demo y menús a velocidad completa (60 VI/s; hasta ~9x sin limitador), audio con señal, teclado,
+save states, pantalla completa. **Sin probar todavía**: mando, SRAM/FlashRAM en un juego real, aplicar trucos, Discord Rich Presence,
+ROMs `.7z`, pantallas de DPI alto. No hay instalador (solo ZIP portable). El detalle completo está en
+[`Docs/porting/02-PARITY.md`](Docs/porting/02-PARITY.md).
 
-```bash
-packaging/linux/build-appimage.sh   # genera Vortex64-x86_64.AppImage
-```
+## 📜 Licencia y créditos
 
-Para que corra en cualquier distro (Fedora/Atomic, Ubuntu, Debian, Arch, openSUSE…) se compila en un sistema
-con glibc antigua: el workflow `.github/workflows/release.yml` lo hace en ubuntu-22.04. Las librerías se
-copian sin modificar (el `patchelf` de linuxdeploy corrompe las librerías modernas) y `check-elf-integrity.py`
-lo verifica.
-
-## Estado
-
-| Área | Estado |
-|---|---|
-| Arranque de ROM con video, audio y entrada | Funciona (verificado con ROM real) |
-| GUI Qt6 (navegador, ajustes, trucos, depurador) | Funciona; ver [`Docs/dev/PROJECT64_PARITY.md`](Docs/dev/PROJECT64_PARITY.md) para el detalle por función |
-| Recompilador (JIT) | En pruebas; el intérprete es la ruta de referencia |
-| Wayland nativo | Pendiente (hoy funciona vía Xwayland) |
-| Flatpak | Pendiente |
-
-## Limitaciones conocidas
-
-- El recompilador (JIT) es la parte más joven del núcleo; si un juego falla, prueba con el intérprete en los ajustes.
-- Wayland nativo no está disponible todavía: en Wayland funciona mediante Xwayland.
-- No hay Flatpak todavía; el formato de distribución es el AppImage.
-- La compatibilidad por juego no está catalogada; los reportes en Issues ayudan a construir esa lista.
-
-## Documentación
-
-- [Compilar y empaquetar](#compilar-desde-el-código) · [Tests](#tests)
-- [Estado del port a Linux](Docs/dev/LINUX_PORT.md) · [Auditoría](Docs/dev/LINUX_PORT_AUDIT.md)
-- [Cambios](Docs/CHANGELOG.md) · [Carpetas de usuario](Docs/USER_FOLDERS.md) · [Soporte](Docs/SUPPORT.md)
-
-## Licencia y créditos
-
-Vortex64 es software libre bajo la **GNU GPL v2** ([`LICENSE`](LICENSE)). Se basa en **Project64**
-y usa GLideN64, AsmJit, SDL2, Duktape, Discord RPC, 7-Zip C SDK, zlib/minizip, Berkeley SoftFloat y Qt6.
-Atribución completa en [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) y en [`licenses/`](licenses/).
+Software libre bajo la **GNU GPL v2** ([`LICENSE`](LICENSE)). Basado en **Project64** y en el Vortex64 original para Linux; usa GLideN64, AsmJit,
+SDL2, Duktape, Discord RPC, 7-Zip C SDK, zlib/minizip, Berkeley SoftFloat y Qt 6. Atribución completa en
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) y [`licenses/`](licenses/). El README de la versión Linux original está en
+[`Docs/README-LINUX-ORIGINAL.md`](Docs/README-LINUX-ORIGINAL.md).
 Nintendo 64 es marca de Nintendo; este proyecto no está afiliado a Nintendo ni a Project64.
 
 ---
 
-## English summary
-
-Vortex64 is a native Linux port of the Project64 core with a Qt6 UI and SDL2/OpenGL backends
-(no Wine/Proton). **Beta software.** Download the AppImage from
-[Releases](https://github.com/SugarSV11/Vortex64/releases), `chmod +x` it and run it; bring your own ROMs.
-Build: `cmake -S . -B build -G Ninja && cmake --build build` (see dependencies above). GPLv2.
+<sub>**English:** Vortex64-Windows is the native Windows (x64, MSVC, Qt 6) port of the Vortex64 N64 emulator (Project64 core, x64 JIT recompiler, SDL2/OpenGL,
+GLideN64 bundled). Download the portable ZIP from Releases, extract and run `vortex64.exe`; bring your own ROMs. GPLv2.</sub>
