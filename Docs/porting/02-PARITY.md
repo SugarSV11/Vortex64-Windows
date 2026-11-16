@@ -36,7 +36,7 @@ Leyenda: ✅ verificado en Windows (con la prueba indicada) · 🟡 compila/abre
 | "Siempre visible" (siempre encima) | ✅ | menú Ver: el estilo WS_EX_TOPMOST pasa de False a True |
 | Instancia única | ✅ | `instance-test` con procesos reales (detecta, termina, sin restos) |
 | CLI | ✅ | arranque, `--interpreter/--recompiler/--unlimited/--perf/--profile` |
-| Tests automáticos | ✅ (parcial) | 88 pruebas ctest (10 núcleo/JIT/RSP/CLI/instancia + 78 de la GUI) + suite dirigida del JIT; 8 tests de la GUI de Linux sin portar (POSIX/X11/hardware) y 2 que necesitan el módulo Qt Test |
+| Tests automáticos | ✅ (parcial) | 113 pruebas ctest sin ventana (núcleo, RSP, CLI, instancia, JIT-fuzz, 4 de migración/first-run/audio, y la GUI) + suite dirigida del JIT (~3 min) + `rombrowser` con ROM real; `lifecycle`/`mainwindow` portados (etiqueta `window`, abren ventana); sin portar `script-test` y `debugger-test`; los de X11/XTest/uinput no aplican a Windows |
 | Empaquetado | ✅ (ZIP portable) | ZIP 27,8 MB probado en carpeta limpia; sin instalador ni asociación de archivos |
 | CI GitHub Actions | 🟡 | escrita, nunca ejecutada (no hay repositorio remoto) |
 | Linux sigue compilando | 🟡 | los cambios de código compartido llevan `#ifdef _WIN32`; no se compiló en Linux |

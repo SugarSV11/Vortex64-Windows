@@ -22,7 +22,8 @@
 #define LOCK_EX 0
 #define LOCK_UN 0
 static inline int flock(int, int) { return 0; }
-static inline int fchmod(int, int) { return 0; } // permissions are not copied on Windows
+static inline int fchmod(int, int) { return 0; }
+static inline int close(int Fd) { return _close(Fd); } // permissions are not copied on Windows
 #endif
 
 // g_ModuleLogLevel may be nullptr while AppInit() is still in session in path.cpp.
@@ -227,6 +228,63 @@ bool CopyTree(const std::filesystem::path & Source, const std::filesystem::path 
     return Ok;
 }
 
+// A link to a folder. A symbolic link needs a privilege on Windows (developer mode or an administrator); a junction does not, so it is the
+// fallback there: without it the migration from the folders of Project64 never finished (it was tried again at every start).
+static void MakeDirectoryLink(const std::filesystem::path & Target, const std::filesystem::path & Link, std::error_code & Error)
+{
+    std::filesystem::create_directory_symlink(Target, Link, Error);
+#ifdef _WIN32
+    if (!Error)
+    {
+        return;
+    }
+    Error.clear();
+    std::error_code Ec;
+    const std::wstring Absolute = std::filesystem::absolute(Target, Ec).wstring();
+    if (Ec || !std::filesystem::create_directory(Link, Ec))
+    {
+        Error = Ec ? Ec : std::make_error_code(std::errc::file_exists);
+        return;
+    }
+    const std::wstring Substitute = L"\\??\\" + Absolute;
+    struct
+    {
+        ULONG ReparseTag;
+        USHORT ReparseDataLength;
+        USHORT Reserved;
+        USHORT SubstituteNameOffset;
+        USHORT SubstituteNameLength;
+        USHORT PrintNameOffset;
+        USHORT PrintNameLength;
+        WCHAR PathBuffer[2 * MAX_PATH + 8];
+    } Data = {};
+    if (Substitute.size() > MAX_PATH * 2)
+    {
+        std::filesystem::remove(Link, Ec);
+        Error = std::make_error_code(std::errc::filename_too_long);
+        return;
+    }
+    memcpy(Data.PathBuffer, Substitute.c_str(), (Substitute.size() + 1) * sizeof(WCHAR));
+    Data.ReparseTag = 0xA0000003; // IO_REPARSE_TAG_MOUNT_POINT
+    Data.SubstituteNameLength = (USHORT)(Substitute.size() * sizeof(WCHAR));
+    Data.PrintNameOffset = (USHORT)(Data.SubstituteNameLength + sizeof(WCHAR));
+    Data.ReparseDataLength = (USHORT)(8 + Data.PrintNameOffset + sizeof(WCHAR));
+    HANDLE Dir = CreateFileW(Link.wstring().c_str(), GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+    DWORD Returned = 0;
+    const bool Ok = Dir != INVALID_HANDLE_VALUE && DeviceIoControl(Dir, 0x000900A4 /* FSCTL_SET_REPARSE_POINT */, &Data, (DWORD)(Data.ReparseDataLength + 8), nullptr, 0, &Returned, nullptr);
+    const DWORD Last = GetLastError();
+    if (Dir != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(Dir);
+    }
+    if (!Ok)
+    {
+        std::filesystem::remove(Link, Ec);
+        Error = std::error_code((int)Last, std::system_category());
+    }
+#endif
+}
+
 // one pair of folders; true when it is finished (nothing to copy, or all copied)
 bool MigrateOne(const std::string & Legacy, const std::string & Current, const std::set<std::string> & Skip, const std::set<std::string> & Linked, int & Copied, std::string & Report)
 {
@@ -275,7 +333,7 @@ bool MigrateOne(const std::string & Legacy, const std::string & Current, const s
         const std::filesystem::path Old = std::filesystem::path(Legacy) / Name, New = std::filesystem::path(Current) / Name;
         if (std::filesystem::exists(Old, Error) && !std::filesystem::exists(New, Error) && !std::filesystem::is_symlink(New, Error))
         {
-            std::filesystem::create_directory_symlink(Old, New, Error);
+            MakeDirectoryLink(Old, New, Error);
             if (Error)
             {
                 Report += "  " + Name + ": the link to the old folder could not be made: " + Error.message() + "\n";

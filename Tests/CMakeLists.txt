@@ -144,9 +144,72 @@ if(TARGET vortex-test AND TARGET language-test)
 endif()
 
 # every test executable gets the crash reporter (no error dialogs, a stack on stdout/stderr instead)
-foreach(T common-test core-test rsp-test instance-test jit-fuzz-test settings-test input-capture-test input-ui-test controller-widget-test
+foreach(T common-test core-test rsp-test instance-test jit-fuzz-test migration-test first-run-test audio-test lifecycle-test mainwindow-test rombrowser-test mainmenu-test settings-test input-capture-test input-ui-test controller-widget-test
           plugin-config-test present-policy-test debugger-test vortex-test plugindir-test plugins-test language-test layout-test)
     if(TARGET ${T})
         target_sources(${T} PRIVATE ${CMAKE_SOURCE_DIR}/Source/Common/Windows/crash_report_autoinstall.cpp)
     endif()
 endforeach()
+
+# ---------------------------------------------------------------------------------------------------------------------
+# More ported tests. "window" label: they need a real window (the video plugin embeds its OpenGL window into the main window, which the
+# Qt "minimal" platform cannot give), so a window appears for a few seconds; run them with `ctest -L window`, skip with `ctest -LE window`.
+# ---------------------------------------------------------------------------------------------------------------------
+if(TARGET first-run-test)
+    foreach(M new legacy)
+        vortex_gui_group(firstrun-${M})
+        vortex_gui_test(first-run-${M} firstrun-${M} first-run-test ARGS ${M})
+    endforeach()
+endif()
+if(TARGET migration-test)
+    add_test(NAME migration COMMAND migration-test)
+    set_tests_properties(migration PROPERTIES PASS_REGULAR_EXPRESSION "PASS" FAIL_REGULAR_EXPRESSION "FAIL;CRASH" TIMEOUT 300)
+endif()
+if(TARGET audio-test)
+    # the plugin's real output through SDL's "disk" audio driver (no sound card): the volume of the settings is applied, mute is silence
+    file(MAKE_DIRECTORY ${VORTEX_PROFILES}/templates)
+    file(WRITE ${VORTEX_PROFILES}/templates/audio-100.cfg "")
+    file(WRITE ${VORTEX_PROFILES}/templates/audio-40.cfg "[Audio-Settings]
+Volume=40
+")
+    file(WRITE ${VORTEX_PROFILES}/templates/audio-mute.cfg "[Audio]
+Enable Audio=0
+")
+    foreach(V 100 40 mute)
+        vortex_gui_group(audio-${V})
+        add_test(NAME gui-audio-${V}-cfg COMMAND ${CMAKE_COMMAND} -E copy ${VORTEX_PROFILES}/templates/audio-${V}.cfg ${VORTEX_PROFILES}/audio-${V}/appdata/vortex64/Project64.cfg)
+        add_test(NAME gui-audio-${V}-dir COMMAND ${CMAKE_COMMAND} -E make_directory ${VORTEX_PROFILES}/audio-${V}/appdata/vortex64)
+        set_tests_properties(gui-audio-${V}-dir PROPERTIES FIXTURES_SETUP gui-audio-${V}-cfgdir FIXTURES_REQUIRED gui-audio-${V}-profile)
+        set_tests_properties(gui-audio-${V}-cfg PROPERTIES FIXTURES_SETUP gui-audio-${V}-ready FIXTURES_REQUIRED "gui-audio-${V}-profile;gui-audio-${V}-cfgdir")
+        add_test(NAME gui-audio-${V} COMMAND ${CMAKE_COMMAND} -E env SDL_AUDIODRIVER=disk SDL_DISKAUDIOFILE=${VORTEX_PROFILES}/audio-${V}/out.raw $<TARGET_FILE:audio-test> ${V})
+        set_tests_properties(gui-audio-${V} PROPERTIES
+            ENVIRONMENT "APPDATA=${VORTEX_PROFILES}/audio-${V}/appdata;LOCALAPPDATA=${VORTEX_PROFILES}/audio-${V}/localappdata"
+            PASS_REGULAR_EXPRESSION "PASS" FAIL_REGULAR_EXPRESSION "FAIL;CRASH" FIXTURES_REQUIRED "gui-audio-${V}-ready" TIMEOUT 180 LABELS gui)
+    endforeach()
+endif()
+foreach(W lifecycle-test mainwindow-test)
+    if(TARGET ${W})
+        vortex_gui_group(${W})
+        add_test(NAME window-${W} COMMAND ${W} ${FAKE_ROM})
+        set_tests_properties(window-${W} PROPERTIES
+            ENVIRONMENT "APPDATA=${VORTEX_PROFILES}/${W}/appdata;LOCALAPPDATA=${VORTEX_PROFILES}/${W}/localappdata"
+            PASS_REGULAR_EXPRESSION "PASS" FAIL_REGULAR_EXPRESSION "FAIL;CRASH" FIXTURES_REQUIRED gui-${W}-profile TIMEOUT 600 LABELS window)
+    endif()
+endforeach()
+
+# ROM browser and main menu (need the Qt Test module: Qt6::Test). The browser test works on a folder that holds "sm64.z64": the header-only fake ROM is copied there.
+# (the ROM information dialog is checked against the real Super Mario 64 (USA): name, country, CRCs, CIC chip. A header-only fake ROM cannot satisfy it,
+# so the test is registered only when a real ROM is given: cmake -DVORTEX_TEST_ROM=C:/path/to/"Super Mario 64 (USA).z64")
+if(TARGET rombrowser-test AND VORTEX_TEST_ROM)
+    vortex_gui_group(rombrowser)
+    add_test(NAME gui-rombrowser-roms COMMAND ${CMAKE_COMMAND} -E copy ${VORTEX_TEST_ROM} ${VORTEX_PROFILES}/rombrowser/roms/sm64.z64)
+    add_test(NAME gui-rombrowser-romsdir COMMAND ${CMAKE_COMMAND} -E make_directory ${VORTEX_PROFILES}/rombrowser/roms)
+    set_tests_properties(gui-rombrowser-romsdir PROPERTIES FIXTURES_SETUP gui-rombrowser-romsfolder FIXTURES_REQUIRED gui-rombrowser-profile)
+    set_tests_properties(gui-rombrowser-roms PROPERTIES FIXTURES_SETUP gui-rombrowser-ready FIXTURES_REQUIRED "gui-rombrowser-profile;gui-rombrowser-romsfolder")
+    vortex_gui_test(rombrowser rombrowser rombrowser-test ARGS ${VORTEX_PROFILES}/rombrowser/roms)
+    set_tests_properties(gui-rombrowser PROPERTIES FIXTURES_REQUIRED "gui-rombrowser-profile;gui-rombrowser-ready")
+endif()
+if(TARGET mainmenu-test)
+    vortex_gui_group(mainmenu)
+    vortex_gui_test(mainmenu mainmenu mainmenu-test)
+endif()

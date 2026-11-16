@@ -6,7 +6,6 @@
 #define getcwd _getcwd
 #define chdir _chdir
 #define getpid _getpid
-#define close _close
 #define W_OK 2
 #define R_OK 4
 #define access _access

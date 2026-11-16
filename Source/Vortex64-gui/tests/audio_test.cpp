@@ -64,6 +64,9 @@ int main(int argc, char ** argv)
     CHECK(g_Plugins->Audio() != nullptr);
     // the library the core loaded (its path is the plugin directory of the settings)
     std::string Path;
+#ifdef _WIN32
+    Path = Base + "/Vortex64-audio.dll"; // (the library the core loaded: next to this executable)
+#else
     {
         FILE * Maps = fopen("/proc/self/maps", "r");
         char Line[1024];
@@ -82,6 +85,7 @@ int main(int argc, char ** argv)
             fclose(Maps);
         }
     }
+#endif
     void * Lib = dlopen(Path.c_str(), RTLD_NOW | RTLD_NOLOAD);
     CHECK(Lib != nullptr);
     if (Lib == nullptr)

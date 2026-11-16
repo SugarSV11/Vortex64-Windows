@@ -10,7 +10,7 @@
     "gui": {
       "description": "Qt6 GUI",
       "dependencies": [
-        { "name": "qtbase", "default-features": false, "features": ["widgets", "gui"] }
+        { "name": "qtbase", "default-features": false, "features": ["widgets", "gui", "testlib"] }
       ]
     }
   }

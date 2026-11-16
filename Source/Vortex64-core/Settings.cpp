@@ -117,7 +117,8 @@ void CSettings::AddHowToHandleSetting(const char * BaseDirectory)
     AddHandler(Setting_AutoZipInstantSave, new CSettingTypeApplication("Settings", "Auto Zip Saves", (uint32_t) true));
     AddHandler(Setting_EraseGameDefaults, new CSettingTypeApplication("Settings", "Erase on default", (uint32_t) true));
     AddHandler(Setting_CheckEmuRunning, new CSettingTypeApplication("Settings", "Check Running", (uint32_t) true));
-#if (!defined(_M_X64) && !defined(__amd64__)) || defined(__linux__)
+#if (!defined(_M_X64) && !defined(__amd64__)) || defined(__linux__) || defined(_WIN32)
+    // (Windows: the same as Linux; the x64 recompiler runs the differential test against the interpreter without differences (jit-fuzz))
     // (Linux: the x64 recompiler is complete and tested against the interpreter here, so it is the default; upstream
     // keeps the interpreter for x64 because its x64 recompiler still has BreakPoint stubs)
     AddHandler(Setting_ForceInterpreterCPU, new CSettingTypeApplication("Settings", "Force Interpreter CPU", false));

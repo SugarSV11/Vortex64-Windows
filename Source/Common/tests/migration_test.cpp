@@ -10,8 +10,13 @@
 #include <fstream>
 #include <sstream>
 #include <sys/stat.h>
+#ifdef _WIN32
+#include <windows.h>
+#include <process.h>
+#else
 #include <sys/wait.h>
 #include <unistd.h>
+#endif
 
 namespace fs = std::filesystem;
 static int g_Failures = 0;
@@ -56,18 +61,36 @@ static void Populate(const fs::path & Config, const fs::path & Data)
 
 static void Environment(const fs::path & Root)
 {
+#ifdef _WIN32
+    setenv("APPDATA", (Root / "config").string().c_str(), 1);
+    setenv("LOCALAPPDATA", (Root / "data").string().c_str(), 1);
+#else
     setenv("XDG_CONFIG_HOME", (Root / "config").c_str(), 1);
     setenv("XDG_DATA_HOME", (Root / "data").c_str(), 1);
+#endif
 }
 
-int main()
+int main(int argc, char ** argv)
 {
+#ifdef _WIN32
+    if (argc > 1 && std::string(argv[1]) == "--migrate-child") // (Windows has no fork: the race of section 5 uses processes of this program)
+    {
+        CPath::MigrateLegacyUserData();
+        return 0;
+    }
+    const fs::path Root = fs::temp_directory_path() / ("vortex-migration-" + std::to_string(_getpid()));
+    fs::remove_all(Root);
+    fs::create_directories(Root);
+#else
+    (void)argc;
+    (void)argv;
     char Template[] = "/tmp/vortex-migration-XXXXXX";
     const fs::path Root = mkdtemp(Template);
+#endif
     // the names of the folders
     Environment(Root / "x");
-    CHECK(CPath::UserConfigDir() == (Root / "x" / "config" / "vortex64").string() && CPath::LegacyConfigDir() == (Root / "x" / "config" / "project64").string());
-    CHECK(CPath::UserDataDir() == (Root / "x" / "data" / "vortex64").string() && CPath::LegacyDataDir() == (Root / "x" / "data" / "project64").string());
+    CHECK(CPath::UserConfigDir() == (Root / "x" / "config" / "vortex64").generic_string() && CPath::LegacyConfigDir() == (Root / "x" / "config" / "project64").generic_string());
+    CHECK(CPath::UserDataDir() == (Root / "x" / "data" / "vortex64").generic_string() && CPath::LegacyDataDir() == (Root / "x" / "data" / "project64").generic_string());
 
     // 1. a new installation: nothing to bring, nothing created of the old name, the work is marked as done
     {
@@ -86,7 +109,7 @@ int main()
         const fs::path OldConfig = CPath::LegacyConfigDir(), OldData = CPath::LegacyDataDir();
         Populate(OldConfig, OldData);
         struct stat Before;
-        stat((OldData / "Save" / "game.eep").c_str(), &Before);
+        stat((OldData / "Save" / "game.eep").string().c_str(), &Before);
         std::string Report;
         const int Copied = CPath::MigrateLegacyUserData(&Report);
         const fs::path NewConfig = CPath::UserConfigDir(), NewData = CPath::UserDataDir();
@@ -98,11 +121,11 @@ int main()
         CHECK(Read(NewData / "Screenshots" / "shot.png") == "PNG" && Read(NewData / "Cheats-User" / "user.cht") == "cheat" && Read(NewData / "Scripts" / "s.js") == "script");
         // not copied: logs; the textures are a link to where they are
         CHECK(!fs::exists(NewData / "Logs"));
-        CHECK(fs::is_symlink(NewData / "Textures") && Read(NewData / "Textures" / "pack" / "tex.png") == "texture");
+        CHECK(fs::exists(NewData / "Textures") && Read(NewData / "Textures" / "pack" / "tex.png") == "texture"); // (a link where possible, a copy otherwise)
         CHECK(fs::exists(NewConfig / ".migrated-from-project64") && fs::exists(NewData / ".migrated-from-project64"));
         // nothing of the old folders changed or removed
         struct stat After;
-        stat((OldData / "Save" / "game.eep").c_str(), &After);
+        stat((OldData / "Save" / "game.eep").string().c_str(), &After);
         CHECK(Read(OldData / "Save" / "game.eep") == "EEPROM-DATA" && Before.st_mtime == After.st_mtime && Before.st_ino == After.st_ino);
         CHECK(fs::exists(OldConfig / "Project64.cfg") && fs::exists(OldData / "Logs" / "old.log") && fs::exists(OldData / "Textures" / "pack" / "tex.png"));
         // once: the second time nothing is copied, and what the user changed since is not touched
@@ -124,7 +147,8 @@ int main()
         CHECK(Read(fs::path(CPath::UserDataDir()) / "Save" / "game.pj0") == "STATE"); // (the others come)
     }
 
-    // 4. a copy that fails is tried again, and what was copied is not copied twice
+    // 4. a copy that fails is tried again, and what was copied is not copied twice (POSIX: needs file permissions)
+#ifndef _WIN32
     if (geteuid() != 0)
     {
         Environment(Root / "retry");
@@ -141,6 +165,7 @@ int main()
         CHECK(Second >= 1 && Read(fs::path(CPath::UserDataDir()) / "Save" / "game.eep") == "EEPROM-DATA");
         CHECK(fs::exists(fs::path(CPath::UserDataDir()) / ".migrated-from-project64"));
     }
+#endif
 
     // 5. several instances that start at once: every file whole, once, the mark written, no half file left over
     {
@@ -152,6 +177,29 @@ int main()
             Big[i] = (char)('a' + (i / 4096) % 26);
         }
         Write(fs::path(CPath::LegacyDataDir()) / "Save" / "big.sra", Big);
+#ifdef _WIN32
+        {
+            char Self[MAX_PATH];
+            GetModuleFileNameA(nullptr, Self, MAX_PATH);
+            std::string Command = std::string("\"") + Self + "\" --migrate-child";
+            PROCESS_INFORMATION Children[6] = {};
+            for (PROCESS_INFORMATION & Child : Children)
+            {
+                STARTUPINFOA Si = {sizeof(Si)};
+                std::string Line = Command;
+                CHECK(CreateProcessA(nullptr, &Line[0], nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &Si, &Child) != 0);
+            }
+            for (PROCESS_INFORMATION & Child : Children)
+            {
+                DWORD Code = 1;
+                WaitForSingleObject(Child.hProcess, 120000);
+                GetExitCodeProcess(Child.hProcess, &Code);
+                CHECK(Code == 0);
+                CloseHandle(Child.hProcess);
+                CloseHandle(Child.hThread);
+            }
+        }
+#else
         pid_t Children[6];
         for (pid_t & Child : Children)
         {
@@ -168,6 +216,7 @@ int main()
             waitpid(Child, &Status, 0);
             CHECK(WIFEXITED(Status) && WEXITSTATUS(Status) == 0);
         }
+#endif
         CHECK(Read(fs::path(CPath::UserDataDir()) / "Save" / "big.sra") == Big);
         CHECK(Read(fs::path(CPath::UserDataDir()) / "Save" / "game.eep") == "EEPROM-DATA");
         CHECK(fs::exists(fs::path(CPath::UserDataDir()) / ".migrated-from-project64") && fs::exists(fs::path(CPath::UserConfigDir()) / ".migrated-from-project64"));
@@ -179,7 +228,8 @@ int main()
         CHECK(Leftovers == 0);
     }
 
-    // 6. a relative XDG variable is not valid (the specification): the folders of the home are used, as everywhere else
+    // 6. a relative XDG variable is not valid (the specification): the folders of the home are used, as everywhere else (POSIX only)
+#ifndef _WIN32
     {
         setenv("XDG_CONFIG_HOME", "relative/config", 1);
         setenv("XDG_DATA_HOME", "relative/data", 1);
@@ -187,6 +237,7 @@ int main()
         CHECK(CPath::UserConfigDir() == (Root / "home" / ".config" / "vortex64").string());
         CHECK(CPath::UserDataDir() == (Root / "home" / ".local" / "share" / "vortex64").string());
     }
+#endif
 
     fs::remove_all(Root);
     printf(g_Failures == 0 ? "PASS migration\n" : "FAILED migration\n");

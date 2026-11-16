@@ -8,6 +8,11 @@
 // load state, end emulation. Then the recompiler is selected and a ROM opened once
 // more (upstream's x64 recompiler stops at the first unimplemented opcode; the test
 // only requires that this ends cleanly). Finally the window is closed.
+#ifdef _WIN32
+#define PJ64_TEST_LIB(n) n ".dll"
+#else
+#define PJ64_TEST_LIB(n) "lib" n ".so"
+#endif
 #include "../MainMenu.h"
 #include "../MainWindow.h"
 
@@ -260,18 +265,30 @@ int main(int argc, char ** argv)
             // Changing the audio plugin while the game runs must not stop it (upstream
             // resets the plugins through SysEvent_ChangePlugins)
             const std::string Dir = g_Settings->LoadStringVal(Directory_Plugin);
+#ifdef _WIN32
+            // (no symlinks without privileges on Windows: a copy of the plugin plays the part of the second plugin file)
+            const std::string Alt = Dir + "Vortex64-audio-alt.dll";
+            remove(Alt.c_str());
+            CHECK(CopyFileA((Dir + "Vortex64-audio.dll").c_str(), Alt.c_str(), FALSE) != 0);
+            g_Settings->SaveString(Plugin_AUDIO_Current, "Vortex64-audio-alt.dll");
+#else
             const std::string Alt = Dir + "libVortex64-audio-alt.so";
             unlink(Alt.c_str());
             CHECK(symlink((Dir + "libVortex64-audio.so").c_str(), Alt.c_str()) == 0);
             g_Settings->SaveString(Plugin_AUDIO_Current, "libVortex64-audio-alt.so");
+#endif
             Pump(4000);
             CHECK(Running());
             CHECK(g_Plugins->Audio() != nullptr);
-            g_Settings->SaveString(Plugin_AUDIO_Current, "libVortex64-audio.so");
+            g_Settings->SaveString(Plugin_AUDIO_Current, PJ64_TEST_LIB("Vortex64-audio"));
             Pump(4000);
             CHECK(Running());
             CHECK(g_Plugins->Audio() != nullptr && g_Plugins->Gfx() != nullptr);
+#ifdef _WIN32
+            remove(Alt.c_str());
+#else
             unlink(Alt.c_str());
+#endif
             printf("plugin change while running: ok\n");
         }
 

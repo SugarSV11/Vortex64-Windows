@@ -262,3 +262,16 @@ Idea del usuario: reutilizar el GLideN64 que lleva Project64 en vez de portar su
 - ZIP portable con GLideN64 (38,2 MB): perfil nuevo -> la GUI lo selecciona sola.
 - Licencia: GPL-2.0-or-later; el binario NO está en el repositorio (`third_party_bin/` ignorado); el ZIP lleva `GLideN64-SOURCE.txt` con el enlace al código (commit a04081a).
 - Sin verificar: diálogo de configuración propio del plugin, otros juegos, rendimiento, pantalla completa con GLideN64.
+
+## Hito 20: más tests portados; JIT por defecto (2026-11-15)
+Qt reconstruido con `testlib`. `ctest -LE window -E directed`: **113/113** (incluye los fixtures de perfil). Nuevos: `migration`, `first-run` (new/legacy),
+`audio` (100 %, 40 %, mute, con el driver `disk` de SDL, sin tarjeta de sonido), `mainmenu`. `rombrowser` (verifica nombre, país, CRC y chip CIC de SM64) se registra solo con
+`-DVORTEX_TEST_ROM=<SM64 real>` (pasó con la ROM del usuario). `lifecycle` y `mainwindow` (con servidor Discord falso en una *named pipe*) están portados y registrados con la etiqueta `window`.
+
+Fallos reales de la aplicación hallados y corregidos al portar:
+1. La migración desde las carpetas de Project64 no terminaba nunca en Windows: crear el enlace simbólico de `Textures` exige privilegios -> ahora cae a una *junction*.
+2. `#define close _close` en el shim de `unistd.h` rompía `QWidget::close()` -> eliminado.
+3. El fichero `vortex.json` de la GUI se guardaba en `%LOCALAPPDATA%` (Qt) en vez de junto al resto de la configuración (`%APPDATA%\vortex64`); copia única del antiguo.
+4. En Windows el JIT no era el predeterminado (sí en Linux) -> ahora lo es, igual que en Linux (el fuzz diferencial da 0 diferencias).
+
+Siguen sin portar: `script-test`, `debugger-test`; los de X11/XTest/uinput no aplican a Windows.

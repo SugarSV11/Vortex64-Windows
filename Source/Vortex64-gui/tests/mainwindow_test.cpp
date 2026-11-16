@@ -39,6 +39,9 @@
 #include <QThread>
 #include <QTimer>
 #include <QUrl>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <arpa/inet.h>
 #include <cstdio>
 #include <mutex>
@@ -46,6 +49,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+#endif
 #include <vector>
 #include <atomic>
 #include <functional>
@@ -106,9 +110,153 @@ static bool Paused()
     return g_Settings->LoadBool(GameRunning_CPU_Paused);
 }
 
-// The Discord client, as far as the rich presence needs it: the Unix socket "discord-ipc-0" in the
-// runtime directory, the handshake and the frames of SET_ACTIVITY. Frames are [opcode][length]
-// (32 bits each, little endian) and a JSON text.
+// The Discord client, as far as the rich presence needs it: the IPC endpoint "discord-ipc-0" (a Unix socket in the runtime
+// directory on POSIX, the named pipe \\.\pipe\discord-ipc-0 on Windows), the handshake and the frames of SET_ACTIVITY.
+// Frames are [opcode][length] (32 bits each, little endian) and a JSON text.
+#ifdef _WIN32
+struct FakeDiscord
+{
+    HANDLE Pipe = INVALID_HANDLE_VALUE;
+    std::thread Thread;
+    std::atomic<bool> Stop{false};
+    std::mutex Lock;
+    std::vector<std::pair<uint32_t, std::string>> Frames;
+    std::atomic<int> Connections{0}, Disconnections{0};
+
+    bool Start(const std::string &)
+    {
+        Pipe = CreateNamedPipeA("\\\\.\\pipe\\discord-ipc-0", PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED, PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, 65536, 65536, 0, nullptr);
+        if (Pipe == INVALID_HANDLE_VALUE)
+        {
+            return false;
+        }
+        Thread = std::thread([this]() { Serve(); });
+        return true;
+    }
+    // a read or write that gives up when the test stops (the pipe is overlapped)
+    bool Transfer(bool Write, void * Buffer, DWORD Length)
+    {
+        char * Data = (char *)Buffer;
+        while (Length > 0 && !Stop)
+        {
+            OVERLAPPED Over = {};
+            Over.hEvent = CreateEventA(nullptr, TRUE, FALSE, nullptr);
+            BOOL Ok = Write ? WriteFile(Pipe, Data, Length, nullptr, &Over) : ReadFile(Pipe, Data, Length, nullptr, &Over);
+            if (!Ok && GetLastError() != ERROR_IO_PENDING)
+            {
+                CloseHandle(Over.hEvent);
+                return false;
+            }
+            while (WaitForSingleObject(Over.hEvent, 100) == WAIT_TIMEOUT)
+            {
+                if (Stop)
+                {
+                    CancelIo(Pipe);
+                    CloseHandle(Over.hEvent);
+                    return false;
+                }
+            }
+            DWORD Count = 0;
+            const BOOL Done = GetOverlappedResult(Pipe, &Over, &Count, FALSE);
+            CloseHandle(Over.hEvent);
+            if (!Done || Count == 0)
+            {
+                return false;
+            }
+            Data += Count;
+            Length -= Count;
+        }
+        return Length == 0;
+    }
+    void WriteFrame(uint32_t Opcode, const std::string & Json)
+    {
+        uint32_t Header[2] = {Opcode, (uint32_t)Json.size()};
+        Transfer(true, Header, sizeof(Header));
+        Transfer(true, (void *)Json.data(), (DWORD)Json.size());
+    }
+    void Serve()
+    {
+        while (!Stop)
+        {
+            OVERLAPPED Over = {};
+            Over.hEvent = CreateEventA(nullptr, TRUE, FALSE, nullptr);
+            bool Connected = false;
+            if (ConnectNamedPipe(Pipe, &Over))
+            {
+                Connected = true;
+            }
+            else if (GetLastError() == ERROR_PIPE_CONNECTED)
+            {
+                Connected = true;
+            }
+            else if (GetLastError() == ERROR_IO_PENDING)
+            {
+                while (!Stop && WaitForSingleObject(Over.hEvent, 100) == WAIT_TIMEOUT)
+                {
+                }
+                if (Stop)
+                {
+                    CancelIo(Pipe);
+                    CloseHandle(Over.hEvent);
+                    break;
+                }
+                Connected = true;
+            }
+            CloseHandle(Over.hEvent);
+            if (!Connected)
+            {
+                continue;
+            }
+            Connections++;
+            for (;;)
+            {
+                uint32_t Header[2];
+                if (!Transfer(false, Header, sizeof(Header)))
+                {
+                    break;
+                }
+                std::string Json(Header[1], '\0');
+                if (!Transfer(false, &Json[0], Header[1]))
+                {
+                    break;
+                }
+                {
+                    std::lock_guard<std::mutex> Guard(Lock);
+                    Frames.push_back({Header[0], Json});
+                }
+                if (Header[0] == 0) // handshake: the client is ready
+                {
+                    WriteFrame(1, "{\"cmd\":\"DISPATCH\",\"evt\":\"READY\",\"data\":{\"v\":1,\"user\":{\"id\":\"1\",\"username\":\"tester\",\"discriminator\":\"0\",\"avatar\":\"\"}}}");
+                }
+            }
+            DisconnectNamedPipe(Pipe);
+            Disconnections++;
+        }
+    }
+    std::string All()
+    {
+        std::lock_guard<std::mutex> Guard(Lock);
+        std::string Text;
+        for (const auto & Frame : Frames)
+        {
+            Text += std::to_string(Frame.first) + ":" + Frame.second + "\n";
+        }
+        return Text;
+    }
+    ~FakeDiscord()
+    {
+        Stop = true;
+        if (Thread.joinable())
+        {
+            Thread.join();
+        }
+        if (Pipe != INVALID_HANDLE_VALUE)
+        {
+            CloseHandle(Pipe);
+        }
+    }
+};
+#else
 struct FakeDiscord
 {
     int Listener = -1;
@@ -222,6 +370,8 @@ struct FakeDiscord
     }
 };
 
+#endif
+
 int main(int argc, char ** argv)
 {
     if (argc < 2)
@@ -231,7 +381,9 @@ int main(int argc, char ** argv)
     }
     setvbuf(stdout, nullptr, VORTEX_LINEBUF, 0);
     const QString Rom = QString::fromLocal8Bit(argv[1]);
+#ifndef _WIN32
     setenv("SDL_VIDEODRIVER", "x11", 0);
+#endif
     QApplication App(argc, argv);
     // the Discord client of the rich presence (Setting_EnableDiscordRPC is on by default, and the
     // main window starts it): in a runtime directory of its own

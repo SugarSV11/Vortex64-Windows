@@ -63,6 +63,22 @@ QString Store::DefaultPath()
     {
         return g_OverridePath;
     }
+#ifdef _WIN32
+    // Windows: next to the rest of the configuration (%APPDATA%\vortex64, as CPath::UserConfigDir); Qt's "generic config location" is
+    // %LOCALAPPDATA% there. A file that an earlier version wrote in the old place is copied once.
+    const QString Roaming = qEnvironmentVariable("APPDATA");
+    if (!Roaming.isEmpty())
+    {
+        const QString Path = QDir::fromNativeSeparators(Roaming) + QStringLiteral("/vortex64/vortex.json");
+        const QString Old = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + QStringLiteral("/vortex64/vortex.json");
+        if (!QFileInfo::exists(Path) && QFileInfo::exists(Old))
+        {
+            QDir().mkpath(QFileInfo(Path).absolutePath());
+            QFile::copy(Old, Path);
+        }
+        return Path;
+    }
+#endif
     return QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + QStringLiteral("/vortex64/vortex.json");
 }
 

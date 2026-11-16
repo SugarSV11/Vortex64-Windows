@@ -23,9 +23,18 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#ifdef _WIN32
+#include <windows.h>
+#include <process.h>
+#define PJ64_TEST_LIB(n) n ".dll"
+#else
 #include <pwd.h>
+#define PJ64_TEST_LIB(n) "lib" n ".so"
+#endif
 #include <sstream>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 namespace fs = std::filesystem;
 
@@ -108,6 +117,20 @@ static void CheckNoPersonalData(const fs::path & Root, const char * What)
 
 static fs::path MakeSandbox(fs::path & Config, fs::path & Data)
 {
+#ifdef _WIN32
+    // Windows: the user data lives in %APPDATA% (settings: "config") and %LOCALAPPDATA% (saves, logs: "data"); the home is USERPROFILE
+    const fs::path Root = fs::temp_directory_path() / ("vortex-first-run-" + std::to_string(_getpid()));
+    fs::remove_all(Root);
+    Config = Root / "config";
+    Data = Root / "data";
+    fs::create_directories(Root / "home");
+    fs::create_directories(Config);
+    fs::create_directories(Data);
+    setenv("USERPROFILE", (Root / "home").string().c_str(), 1);
+    setenv("APPDATA", Config.string().c_str(), 1);
+    setenv("LOCALAPPDATA", Data.string().c_str(), 1);
+    return Root;
+#else
     char Template[] = "/tmp/vortex-first-run-XXXXXX";
     const fs::path Root = mkdtemp(Template);
     Config = Root / "config";
@@ -118,6 +141,7 @@ static fs::path MakeSandbox(fs::path & Config, fs::path & Data)
     setenv("XDG_DATA_HOME", Data.c_str(), 1);
     setenv("XDG_CACHE_HOME", (Root / "cache").c_str(), 1);
     return Root;
+#endif
 }
 
 int main(int argc, char ** argv)
@@ -130,6 +154,35 @@ int main(int argc, char ** argv)
         return 2;
     }
     // (what the home of the person is: it must not be anywhere in what is written)
+#ifdef _WIN32
+    const char * Home = getenv("USERPROFILE");
+    RealHome = Home != nullptr ? Home : "";
+    {
+        // (the executable normally lives in the person's home on a development machine: its own folder is not a leak of user data)
+        char Exe[MAX_PATH] = {};
+        GetModuleFileNameA(nullptr, Exe, MAX_PATH);
+        std::string ExeDir = Exe;
+        for (char & c : ExeDir)
+        {
+            if (c == '\\')
+            {
+                c = '/';
+            }
+        }
+        std::string HomeSlash = RealHome;
+        for (char & c : HomeSlash)
+        {
+            if (c == '\\')
+            {
+                c = '/';
+            }
+        }
+        if (!HomeSlash.empty() && ExeDir.compare(0, HomeSlash.size(), HomeSlash) == 0)
+        {
+            RealHome.clear();
+        }
+    }
+#else
     const char * Home = getenv("HOME");
     RealHome = Home != nullptr ? Home : "";
     if (const passwd * Entry = getpwuid(getuid()))
@@ -139,6 +192,7 @@ int main(int argc, char ** argv)
             RealHome = Entry->pw_dir;
         }
     }
+#endif
     fs::path Config, Data;
     const fs::path Root = MakeSandbox(Config, Data);
     const fs::path LegacyConfig = Config / "project64", LegacyData = Data / "project64";
@@ -187,7 +241,7 @@ int main(int argc, char ** argv)
             return 2;
         }
         Vortex::Store & Store = Vortex::Store::Instance();
-        CHECK(Store.DefaultPath() == QString::fromStdString((Config / "vortex64" / "vortex.json").string()));
+        CHECK(Store.DefaultPath() == QString::fromStdString((Config / "vortex64" / "vortex.json").generic_string()));
         CHECK(WaitFor([&]() { return !Shell->Model()->Scanning(); }, 20000));
         QApplication::processEvents();
 
@@ -244,7 +298,7 @@ int main(int argc, char ** argv)
             CHECK(Shell->Page("library")->Browser()->EmptyShown());
             CHECK(Shell->SelectedRom().isEmpty() && Store.LastSelected().isEmpty());
             CHECK(g_Lang->IsLanguageLoaded() && g_Settings->LoadStringVal(Setting_CurrentLanguage) == "Español"); // (nothing is asked: Spanish from the start)
-            CHECK(g_Settings->LoadStringVal(Plugin_GFX_Current) == (QFile::exists(QCoreApplication::applicationDirPath() + "/libGLideN64.so") ? "libGLideN64.so" : "libVortex64-video.so"));
+            CHECK(g_Settings->LoadStringVal(Plugin_GFX_Current) == (QFile::exists(QCoreApplication::applicationDirPath() + "/" PJ64_TEST_LIB("GLideN64")) ? PJ64_TEST_LIB("GLideN64") : PJ64_TEST_LIB("Vortex64-video")));
             CHECK(g_Settings->LoadStringVal(Cmd_RomFile).empty());
             CHECK(!g_Settings->LoadBool(RomList_GameDirUseSelected));
             CHECK(!g_Settings->LoadBool(RomList_GameDirRecursive));
