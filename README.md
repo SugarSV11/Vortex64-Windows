@@ -9,7 +9,7 @@
 ![GUI](https://img.shields.io/badge/GUI-Qt%206-41CD52?logo=qt&logoColor=white)
 ![Licencia](https://img.shields.io/badge/licencia-GPL--2.0-blue)
 
-[**⬇ Descargar**](../../releases/latest) · [Compilar](Docs/development/BUILD-WINDOWS.md) · [Estado del port](Docs/porting/01-PROGRESS.md) · [Paridad con Linux](Docs/porting/02-PARITY.md)
+[**⬇ Descargar**](../../releases/latest) · [Compilar](Docs/development/BUILD-WINDOWS.md) · [Estado del port](Docs/porting/01-PROGRESS.md) · [Paridad con Linux](Docs/porting/02-PARITY.md) · [Compatibilidad](Docs/COMPATIBILITY.md)
 
 </div>
 
@@ -17,7 +17,7 @@
 
 ## ✨ ¿Qué es?
 
-**Vortex64-Windows** es el port a **Windows** de [Vortex64](https://github.com/SugarSV11/Vortex64), un emulador de Nintendo 64 creado por **SugarSV11** para Linux.
+**Vortex64-Windows** es un emulador de N64 con interfaz Qt6 propia, construido sobre el núcleo de [Project64](https://github.com/project64/project64) (GPLv2). Port y desarrollo por **SugarSV11**. Es la versión para **Windows** de [Vortex64](https://github.com/SugarSV11/Vortex64) (Linux).
 Este repositorio lo lleva a Windows con **MSVC x64, CMake, vcpkg y Qt 6**, sin Wine ni capas de compatibilidad: es un ejecutable nativo.
 
 > Necesitas tus **propias ROMs**. Este proyecto no incluye ni distribuye ninguna ROM ni contenido de Nintendo.
